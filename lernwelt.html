@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leo's Lernwelt</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Verhindert Scrollen */
+        }
+        /* Styling für den fixierten Header */
+        .game-header {
+            background: rgba(17, 24, 39, 0.8); /* a bit transparent dark blue */
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #374151;
+            z-index: 10;
+            flex-shrink: 0;
+        }
+        main {
+            flex-grow: 1;
+            overflow-y: auto; /* Erlaubt Scrollen nur im Hauptbereich, falls nötig */
+            position: relative;
+        }
+        /* Grundlegende Form-Stile, werden von JS überschrieben/erweitert */
+        .shape-piece, .shape-target {
+            width: 100px;
+            height: 100px;
+            position: absolute;
+            user-select: none;
+        }
+        .shape-kreis { border-radius: 50%; }
+        .shape-quadrat { border-radius: 10%; }
+        .shape-stern { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+    </style>
+</head>
+<body class="text-white">
+
+    <!-- VERBESSERT: Einziger, dynamischer Header für alles -->
+    <header id="game-header" class="game-header w-full p-4 flex items-center justify-between">
+        <h1 id="game-title" class="text-2xl md:text-3xl font-bold text-gray-200"></h1>
+        <div>
+            <button id="back-to-menu" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-5 rounded-lg text-lg transition-transform duration-200 hover:scale-105 hidden">
+                Menü
+            </button>
+             <a id="back-to-dashboard" href="index.html" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-5 rounded-lg text-lg transition-transform duration-200 hover:scale-105 hidden">
+                Dashboard
+            </a>
+        </div>
+    </header>
+
+    <!-- Hauptcontainer für das Spiel -->
+    <main class="w-full p-4 md:p-8">
+        <!-- Spiel-Menü (wird per JS befüllt) -->
+        <div id="game-menu" class="h-full">
+            <!-- Dynamically generated menu cards will appear here -->
+        </div>
+
+        <!-- Spiel-Ansicht -->
+        <div id="game-view" class="hidden h-full flex flex-col">
+            <p id="instruction-text" class="text-lg text-center text-gray-400 mb-6"></p>
+
+            <!-- Container für das Tipp-Spiel -->
+            <div id="tipp-game-board" class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6"></div>
+
+            <!-- Container für das Formen-Spiel (jetzt relativ, um Partikel korrekt zu positionieren) -->
+            <div id="shape-game-container" class="relative w-full h-full flex-grow">
+                <div id="shape-targets" class="absolute inset-0"></div>
+                <div id="shape-pieces" class="absolute inset-0"></div>
+            </div>
+
+            <div id="quiz-button-container" class="text-center mt-6">
+                 <button id="quiz-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-xl transition-transform duration-200 hover:scale-105 hidden"></button>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Overlay für Erfolgsmeldung -->
+    <div id="success-overlay" class="hidden absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center z-20">
+        <h2 class="text-6xl font-black text-green-400 mb-8">Super gemacht!</h2>
+        <button id="play-again-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg text-2xl transition-transform duration-200 hover:scale-105">
+            Nochmal spielen
+        </button>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
+
