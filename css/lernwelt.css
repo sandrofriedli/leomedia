@@ -1,0 +1,52 @@
+﻿body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #111827;
+    overflow: hidden;
+}
+
+.game-header {
+    background: rgba(17, 24, 39, 0.8);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #374151;
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+main {
+    flex-grow: 1;
+    overflow-y: auto;
+    position: relative;
+}
+
+.shape-piece,
+.shape-target {
+    width: 100px;
+    height: 100px;
+    position: absolute;
+    user-select: none;
+}
+
+.shape-kreis {
+    border-radius: 50%;
+}
+
+.shape-quadrat {
+    border-radius: 10%;
+}
+
+.shape-stern {
+    clip-path: polygon(
+        50% 0%,
+        61% 35%,
+        98% 35%,
+        68% 57%,
+        79% 91%,
+        50% 70%,
+        21% 91%,
+        32% 57%,
+        2% 35%,
+        39% 35%
+    );
+}

@@ -1,0 +1,134 @@
+﻿body {
+    color: #e5e5e5;
+    overflow-x: hidden;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.1), transparent 40%),
+        radial-gradient(circle at bottom right, rgba(236, 72, 153, 0.1), transparent 40%);
+    z-index: -1;
+    animation: background-pan 30s linear infinite;
+}
+
+#booksGrid {
+    perspective: 2000px;
+}
+
+.storybook-card {
+    position: relative;
+    width: 250px;
+    height: 350px;
+    background: linear-gradient(45deg, #1e3a8a, #3b82f6);
+    border-radius: 8px 4px 4px 8px;
+    padding: 0;
+    transform-style: preserve-3d;
+    transform: perspective(1000px) rotateY(0deg);
+    transition:
+        transform 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+        box-shadow 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2), inset 0 0 15px rgba(255, 255, 255, 0.05);
+    text-decoration: none;
+    color: #ffffff;
+    animation: float 6s ease-in-out infinite;
+}
+
+#booksGrid .storybook-card:nth-child(2n) {
+    animation-delay: -3s;
+}
+
+.storybook-card:hover {
+    transform: perspective(1000px) rotateY(-25deg) scale(1.05);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(59, 130, 246, 0.5);
+    animation-play-state: paused;
+}
+
+.book-cover {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    backface-visibility: hidden;
+    transform: translateZ(1px);
+}
+
+.storybook-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -20px;
+    width: 20px;
+    height: 100%;
+    background: linear-gradient(to right, #172554, #1e3a8a);
+    transform-origin: left;
+    transform: rotateY(90deg);
+    border-radius: 4px 0 0 4px;
+    box-shadow: inset 2px 0 5px rgba(0, 0, 0, 0.3);
+}
+
+.storybook-card::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: -1px;
+    bottom: 5px;
+    width: 15px;
+    background: linear-gradient(to right, #d1d5db, #f9fafb, #d1d5db);
+    transform-origin: right;
+    transform: rotateY(-90deg) translateZ(249px);
+    box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.storybook-card .emoji-container {
+    font-size: 5rem;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 9999px;
+    margin-bottom: 0;
+}
+
+.storybook-card h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.admin-controls button {
+    transition: background-color 0.2s;
+}
+
+@keyframes background-pan {
+    0% {
+        background-position: 0% 0%;
+    }
+    100% {
+        background-position: 100% 100%;
+    }
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+    100% {
+        transform: translateY(0px);
+    }
+}
