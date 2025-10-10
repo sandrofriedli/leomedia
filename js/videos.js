@@ -7,6 +7,8 @@ const videoForm = document.getElementById('videoForm');
 const authControls = document.getElementById('auth-controls');
 const addVideoBtnContainer = document.getElementById('add-video-btn-container');
 
+const TMDB_POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+
 let allVideos = [];
 let loggedIn = false;
 
@@ -61,8 +63,9 @@ function renderVideos(videos) {
             `;
         }
 
-        const imageOrFallback = video.posterUrl
-            ? `<img src="${video.posterUrl}" alt="Poster von ${video.title}" onerror="this.onerror=null;this.parentElement.innerHTML = '<div class=\'placeholder\'>${video.title}</div>';">`
+        const posterSrc = resolvePosterUrl(video.posterUrl);
+        const imageOrFallback = posterSrc
+            ? `<img src="${posterSrc}" alt="Poster von ${video.title}" onerror="this.onerror=null;this.parentElement.innerHTML = '<div class=\'placeholder\'>${video.title}</div>';">`
             : `<div class='placeholder'>${video.title}</div>`;
 
         card.innerHTML = `
@@ -111,8 +114,9 @@ function closeFormModal() {
 }
 
 function openDetailModal(video) {
-    const imageOrFallback = video.posterUrl
-        ? `<img src="${video.posterUrl}" alt="Poster von ${video.title}" class="w-full h-auto rounded-lg shadow-lg" onerror="this.onerror=null;this.parentElement.innerHTML = '<div class=\'placeholder text-xl\'>${video.title}</div>';">`
+    const posterSrc = resolvePosterUrl(video.posterUrl);
+    const imageOrFallback = posterSrc
+        ? `<img src="${posterSrc}" alt="Poster von ${video.title}" class="w-full h-auto rounded-lg shadow-lg" onerror="this.onerror=null;this.parentElement.innerHTML = '<div class=\'placeholder text-xl\'>${video.title}</div>';">`
         : `<div class='placeholder text-xl'>${video.title}</div>`;
 
     detailModalContent.innerHTML = `
@@ -213,6 +217,34 @@ async function logout() {
     await fetch('./api/logout.php');
     loggedIn = false;
     window.location.reload();
+}
+
+function resolvePosterUrl(posterUrl) {
+    if (!posterUrl) {
+        return '';
+    }
+
+    const trimmed = posterUrl.trim();
+
+    if (!trimmed) {
+        return '';
+    }
+
+    const lower = trimmed.toLowerCase();
+
+    if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('data:') || lower.startsWith('blob:')) {
+        return trimmed;
+    }
+
+    if (trimmed.startsWith('/')) {
+        return `${TMDB_POSTER_BASE_URL}${trimmed}`;
+    }
+
+    if (trimmed.startsWith('./') || trimmed.startsWith('../')) {
+        return trimmed;
+    }
+
+    return `./${trimmed}`;
 }
 
 document.addEventListener('DOMContentLoaded', checkLoginStatus);
