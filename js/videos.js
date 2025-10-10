@@ -1,4 +1,4 @@
-﻿const videosGrid = document.getElementById('videosGrid');
+const videosGrid = document.getElementById('videosGrid');
 const formModal = document.getElementById('formModal');
 const detailModal = document.getElementById('detailModal');
 const detailModalContent = document.getElementById('detailModalContent');
@@ -7,7 +7,26 @@ const videoForm = document.getElementById('videoForm');
 const authControls = document.getElementById('auth-controls');
 const addVideoBtnContainer = document.getElementById('add-video-btn-container');
 
-const TMDB_POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const VIDEO_COLOR_MAP = {
+    'peppa pig': '#f472b6',
+    'paw patrol': '#3b82f6',
+    'bluey': '#60a5fa',
+    'cocomelon': '#f97316',
+    'feuerwehrmann sam': '#facc15',
+    'bob der baumeister': '#f59e0b',
+    'die sendung mit der maus': '#f97316',
+    'loewenzahn': '#22c55e',
+    'sesamstrasse': '#facc15',
+    'die biene maja': '#fcd34d',
+    'heidi': '#fb7185',
+    'wickie und die starken maenner': '#38bdf8',
+    'bobo siebenschlaefer': '#a855f7',
+    'der kleine prinz': '#818cf8',
+    'fieps': '#34d399',
+    'nils holgersson': '#93c5fd',
+    'pinocchio': '#fb7185',
+    'der kleine drache kokosnuss': '#f97316'
+};
 
 let allVideos = [];
 let loggedIn = false;
@@ -48,12 +67,12 @@ function renderVideos(videos) {
         card.className = 'video-card';
         card.addEventListener('click', () => openDetailModal(video));
 
-        const posterSrc = resolvePosterUrl(video.posterUrl);
         const safeTitle = escapeHtml(video.title || '');
         const safeSummary = escapeHtml(video.summary || 'Keine Beschreibung verfuegbar.');
         const safePlatform = escapeHtml(video.platform || '');
         const safeTags = extractSafeTags(video.tags);
         const ageLabel = Number(video.age) || 0;
+        const colorInfo = getVideoColorInfo(video);
 
         let adminControlsHTML = '';
         if (loggedIn) {
@@ -69,36 +88,23 @@ function renderVideos(videos) {
             `;
         }
 
-        const mediaMarkup = posterSrc
-            ? `<img class="video-card-poster" src="${posterSrc}" alt="Poster von ${safeTitle}">`
-            : `<div class="placeholder">${safeTitle}</div>`;
-
         card.innerHTML = `
             ${adminControlsHTML}
-            ${safePlatform ? `<span class="platform-badge">${safePlatform}</span>` : ''}
-            ${mediaMarkup}
-            <div class="overlay">
-                <h3 class="text-xl font-semibold text-white">${safeTitle}</h3>
-                <p class="text-sm text-gray-300 mt-2">${safeSummary}</p>
-                <div class="mt-3 flex items-center gap-2 text-xs text-gray-400">
-                    <span class="px-2 py-1 rounded-full border border-gray-600">Ab ${ageLabel} J.</span>
+            <div class="video-color-block" style="background-color:${colorInfo.background}; color:${colorInfo.text};">
+                ${safePlatform ? `<span class="video-color-block__platform">${safePlatform}</span>` : ''}
+                <span class="video-color-block__title">${safeTitle}</span>
+            </div>
+            <div class="video-card-content">
+                <p class="video-card-summary">${safeSummary}</p>
+                <div class="video-card-meta">
+                    <span class="video-age-badge">Ab ${ageLabel} J.</span>
                     ${safeTags
-                        .slice(0, 2)
-                        .map((tag) => `<span class="px-2 py-1 rounded-full border border-gray-600">${tag}</span>`)
+                        .slice(0, 3)
+                        .map((tag) => `<span class="video-tag">${tag}</span>`)
                         .join('')}
                 </div>
             </div>
         `;
-
-        const posterImg = card.querySelector('.video-card-poster');
-        if (posterImg) {
-            posterImg.addEventListener('error', () => {
-                const fallback = document.createElement('div');
-                fallback.className = 'placeholder';
-                fallback.textContent = video.title || 'Kein Titel';
-                posterImg.replaceWith(fallback);
-            });
-        }
 
         const deleteBtn = card.querySelector('.delete-video-btn');
         if (deleteBtn) {
@@ -153,41 +159,42 @@ function closeFormModal() {
 }
 
 function openDetailModal(video) {
-    const posterSrc = resolvePosterUrl(video.posterUrl);
     const safeTitle = escapeHtml(video.title || '');
     const safeSummary = escapeHtml(video.summary || 'Keine Beschreibung verfuegbar.');
     const safeTags = extractSafeTags(video.tags);
     const ageLabel = Number(video.age) || 0;
     const firstAired = escapeHtml(video.firstAired || '');
     const imdbRating = escapeHtml(video.imdbRating || '');
+    const safePlatform = escapeHtml(video.platform || '');
+    const colorInfo = getVideoColorInfo(video);
 
     detailModalContent.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="md:col-span-1">
-                ${posterSrc ? `<img class="detail-poster" src="${posterSrc}" alt="Poster von ${safeTitle}">` : `<div class="placeholder text-xl">${safeTitle}</div>`}
-            </div>
-            <div class="md:col-span-2 p-4">
-                <h2 class="text-3xl font-bold text-white mb-2">${safeTitle}</h2>
-                <div class="flex items-center gap-4 text-gray-400 mb-4">
-                    ${firstAired ? `<span>Erstausstrahlung: ${firstAired}</span>` : ''}
-                    ${imdbRating ? `<span>IMDb: ${imdbRating} / 10</span>` : ''}
-                    <span>Ab ${ageLabel} J.</span>
+                <div class="detail-color-block" style="background-color:${colorInfo.background}; color:${colorInfo.text};">
+                    ${safePlatform ? `<span class="video-color-block__platform">${safePlatform}</span>` : ''}
+                    <span class="video-color-block__title">${safeTitle}</span>
                 </div>
-                <p class="text-gray-300 mb-6">${safeSummary}</p>
-                ${safeTags.length ? `<div class="mb-6 flex flex-wrap gap-2">${safeTags.map((tag) => `<span class="bg-gray-700 text-gray-300 text-xs font-medium px-2.5 py-1 rounded-full">${tag}</span>`).join('')}</div>` : ''}
+            </div>
+            <div class="md:col-span-2 p-4 space-y-6">
+                <div>
+                    <div class="detail-meta">
+                        ${firstAired ? `<span>Erstausstrahlung: ${firstAired}</span>` : ''}
+                        ${imdbRating ? `<span>IMDb: ${imdbRating} / 10</span>` : ''}
+                        <span>Ab ${ageLabel} J.</span>
+                    </div>
+                </div>
+                <p class="text-gray-300 leading-relaxed">${safeSummary}</p>
+                ${
+                    safeTags.length
+                        ? `<div class="detail-tags">${safeTags
+                              .map((tag) => `<span class="detail-tag">${tag}</span>`)
+                              .join('')}</div>`
+                        : ''
+                }
             </div>
         </div>
     `;
-
-    const detailPoster = detailModalContent.querySelector('.detail-poster');
-    if (detailPoster) {
-        detailPoster.addEventListener('error', () => {
-            const fallback = document.createElement('div');
-            fallback.className = 'placeholder text-xl';
-            fallback.textContent = video.title || 'Kein Titel';
-            detailPoster.replaceWith(fallback);
-        });
-    }
 
     detailModal.classList.remove('hidden');
     detailModal.classList.add('flex');
@@ -271,32 +278,50 @@ async function logout() {
     window.location.reload();
 }
 
-function resolvePosterUrl(posterUrl) {
-    if (!posterUrl) {
-        return '';
+function getVideoColorInfo(video) {
+    const background = getSeriesColor(video);
+    return {
+        background,
+        text: getReadableTextColor(background)
+    };
+}
+
+function getSeriesColor(video) {
+    const key = String(video.title || '').trim().toLowerCase();
+    return VIDEO_COLOR_MAP[key] || '#4b5563';
+}
+
+function getReadableTextColor(hexColor) {
+    const rgb = hexToRgb(hexColor);
+    if (!rgb) {
+        return '#f8fafc';
     }
 
-    const trimmed = String(posterUrl).trim();
+    const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
+    return luminance > 0.6 ? '#111827' : '#f8fafc';
+}
 
-    if (!trimmed) {
-        return '';
+function hexToRgb(hex) {
+    const cleanHex = hex.replace('#', '').trim();
+
+    if (!(cleanHex.length === 3 || cleanHex.length === 6)) {
+        return null;
     }
 
-    const lower = trimmed.toLowerCase();
+    const normalized = cleanHex.length === 3
+        ? cleanHex.split('').map((char) => char + char).join('')
+        : cleanHex;
 
-    if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('data:') || lower.startsWith('blob:')) {
-        return trimmed;
+    const value = parseInt(normalized, 16);
+    if (Number.isNaN(value)) {
+        return null;
     }
 
-    if (trimmed.startsWith('/')) {
-        return `${TMDB_POSTER_BASE_URL}${trimmed}`;
-    }
-
-    if (trimmed.startsWith('./') || trimmed.startsWith('../')) {
-        return trimmed;
-    }
-
-    return `./${trimmed}`;
+    return {
+        r: (value >> 16) & 255,
+        g: (value >> 8) & 255,
+        b: value & 255
+    };
 }
 
 function escapeHtml(value) {
