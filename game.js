@@ -1,8 +1,8 @@
-document.addEventListener('DOMContentLoaded', () => {
+﻿document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * V3.3: Diese Funktion injiziert eine komplett neue, ultra-moderne Stil-Palette.
-     * Enthält permanentes Leuchten für erfolgreiche Platzierungen und eine intelligente Header-Steuerung mit Dashboard-Link.
+     * EnthÃ¤lt permanentes Leuchten fÃ¼r erfolgreiche Platzierungen und eine intelligente Header-Steuerung mit Dashboard-Link.
      */
     function injectDynamicStyles() {
         if (document.getElementById('dynamic-game-styles')) return;
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const style = document.createElement('style');
         style.id = 'dynamic-game-styles';
         style.innerHTML = `
-            /* Ultra-modernes Menü-Design */
+            /* Ultra-modernes MenÃ¼-Design */
             #game-menu .menu-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 2rem; padding-top: 2rem; perspective: 1500px; }
             .game-select-card { position: relative; width: 280px; height: 350px; background: rgba(31, 41, 55, 0.5); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), border-color 0.5s ease; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
             .game-select-card:before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 20px; background: radial-gradient(80% 80% at 50% 50%, rgba(167, 139, 250, 0.2), transparent); opacity: 0; transition: opacity 0.5s ease; }
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .card-title { font-size: 1.75rem; font-weight: 700; margin-top: 1.5rem; color: #fff; }
             .card-description { font-size: 1rem; color: #d1d5db; margin-top: 0.5rem; }
             
-            /* Stile für die Spiele selbst */
+            /* Stile fÃ¼r die Spiele selbst */
             #shape-game-container { perspective: 1000px; }
             @keyframes magic-sparkle-burst { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
             .sparkle-particle { position: absolute; width: 10px; height: 10px; background: #bef264; border-radius: 50%; pointer-events: none; animation: magic-sparkle-burst 0.7s ease-out forwards; box-shadow: 0 0 5px #fff, 0 0 10px #bef264, 0 0 15px #86efac; }
@@ -31,14 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
             .shape-target { transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; box-shadow: inset 0px 4px 8px rgba(0,0,0,0.3); }
             .target-filled { box-shadow: none !important; border-style: solid !important; }
 
-            /* Keyframes für das permanente Leuchten */
+            /* Keyframes fÃ¼r das permanente Leuchten */
             @keyframes breathing-glow {
                 0% { box-shadow: 0 0 15px 5px rgba(190, 242, 100, 0.5); }
                 50% { box-shadow: 0 0 30px 10px rgba(190, 242, 100, 0.8); }
                 100% { box-shadow: 0 0 15px 5px rgba(190, 242, 100, 0.5); }
             }
 
-            /* Klasse für das permanente Leuchten */
+            /* Klasse fÃ¼r das permanente Leuchten */
             .target-success-glow {
                 animation: breathing-glow 2s ease-in-out infinite;
             }
@@ -60,14 +60,46 @@ document.addEventListener('DOMContentLoaded', () => {
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
-    // --- DATENBANKEN für die Spiele ---
-    const tiere = [ { name: 'Hund', image: 'assets/images/hund.png', sound: 'assets/sounds/hund.mp3' }, { name: 'Katze', image: 'assets/images/katze.png', sound: 'assets/sounds/katze.mp3' }, { name: 'Kuh', image: 'assets/images/kuh.png', sound: 'assets/sounds/kuh.mp3' }, { name: 'Pferd', image: 'assets/images/pferd.png', sound: 'assets/sounds/pferd.mp3' }, { name: 'Schaf', image: 'assets/images/schaf.png', sound: 'assets/sounds/schaf.mp3' }, { name: 'Frosch', image: 'assets/images/frosch.png', sound: 'assets/sounds/frosch.mp3' }, { name: 'Elefant', image: 'assets/images/elefant.png', sound: 'assets/sounds/elefant.mp3' }, { name: 'Löwe', image: 'assets/images/loewe.png', sound: 'assets/sounds/loewe.mp3' } ];
-    const fahrzeuge = [ { name: 'Auto', image: 'assets/images/auto.png', sound: 'assets/sounds/auto.mp3' }, { name: 'Feuerwehrauto', image: 'assets/images/feuerwehrauto.png', sound: 'assets/sounds/feuerwehrauto.mp3' }, { name: 'Traktor', image: 'assets/images/traktor.png', sound: 'assets/sounds/traktor.mp3' }, { name: 'Flugzeug', image: 'assets/images/flugzeug.png', sound: 'assets/sounds/flugzeug.mp3' }, ];
-    const allShapes = [ { name: 'Kreis', type: 'kreis', color: '#3b82f6', sound: 'assets/sounds/plopp.mp3' }, { name: 'Quadrat', type: 'quadrat', color: '#22c55e', sound: 'assets/sounds/plopp.mp3' }, { name: 'Stern', type: 'stern', color: '#ef4444', sound: 'assets/sounds/plopp.mp3' }, { name: 'Dreieck', type: 'dreieck', color: '#f97316', sound: 'assets/sounds/plopp.mp3' }, { name: 'Herz', type: 'herz', color: '#ec4899', sound: 'assets/sounds/plopp.mp3' }, { name: 'Raute', type: 'raute', color: '#8b5cf6', sound: 'assets/sounds/plopp.mp3' }, ];
+    // --- DATENBANKEN fuer die Spiele ---
+    const tiere = [
+        { name: 'Hund', image: 'assets/images/hund.png', sound: 'assets/sounds/hund.mp3', speech: 'Das ist ein Hund.' },
+        { name: 'Katze', image: 'assets/images/katze.png', sound: 'assets/sounds/katze.mp3', speech: 'Das ist eine Katze.' },
+        { name: 'Kuh', image: 'assets/images/kuh.png', sound: 'assets/sounds/kuh.mp3', speech: 'Das ist eine Kuh.' },
+        { name: 'Pferd', image: 'assets/images/pferd.png', sound: 'assets/sounds/pferd.mp3', speech: 'Das ist ein Pferd.' },
+        { name: 'Schaf', image: 'assets/images/schaf.png', sound: 'assets/sounds/schaf.mp3', speech: 'Das ist ein Schaf.' },
+        { name: 'Frosch', image: 'assets/images/frosch.png', sound: 'assets/sounds/frosch.mp3', speech: 'Das ist ein Frosch.' },
+        { name: 'Elefant', image: 'assets/images/elefant.png', sound: 'assets/sounds/elefant.mp3', speech: 'Das ist ein Elefant.' },
+        { name: 'Loewe', image: 'assets/images/loewe.png', sound: 'assets/sounds/loewe.mp3', speech: 'Das ist ein Loewe.' }
+    ];
+
+    const fahrzeuge = [
+        { name: 'Auto', image: 'assets/images/auto.png', sound: 'assets/sounds/auto.mp3', speech: 'Das ist ein Auto.' },
+        { name: 'Feuerwehrauto', image: 'assets/images/feuerwehrauto.png', sound: 'assets/sounds/feuerwehrauto.mp3', speech: 'Das ist ein Feuerwehrauto.' },
+        { name: 'Traktor', image: 'assets/images/traktor.png', sound: 'assets/sounds/traktor.mp3', speech: 'Das ist ein Traktor.' },
+        { name: 'Flugzeug', image: 'assets/images/flugzeug.png', sound: 'assets/sounds/flugzeug.mp3', speech: 'Das ist ein Flugzeug.' }
+    ];
+
+    const farben = [
+        { name: 'Pink', color: '#ec4899', sound: 'assets/sounds/plopp.mp3', speech: 'Das ist die Farbe Pink.' },
+        { name: 'Hellblau', color: '#60a5fa', sound: 'assets/sounds/plopp.mp3', speech: 'Das ist die Farbe Hellblau.' },
+        { name: 'Sonnengelb', color: '#facc15', sound: 'assets/sounds/plopp.mp3', speech: 'Das ist die Farbe Sonnengelb.' },
+        { name: 'Grasgruen', color: '#22c55e', sound: 'assets/sounds/plopp.mp3', speech: 'Das ist die Farbe Grasgruen.' },
+        { name: 'Lavendel', color: '#a855f7', sound: 'assets/sounds/plopp.mp3', speech: 'Das ist die Farbe Lavendel.' },
+        { name: 'Meerblau', color: '#2563eb', sound: 'assets/sounds/plopp.mp3', speech: 'Das ist die Farbe Meerblau.' }
+    ];
+
+    const allShapes = [
+        { name: 'Kreis', type: 'kreis', color: '#3b82f6', sound: 'assets/sounds/plopp.mp3' },
+        { name: 'Quadrat', type: 'quadrat', color: '#22c55e', sound: 'assets/sounds/plopp.mp3' },
+        { name: 'Stern', type: 'stern', color: '#ef4444', sound: 'assets/sounds/plopp.mp3' },
+        { name: 'Dreieck', type: 'dreieck', color: '#f97316', sound: 'assets/sounds/plopp.mp3' },
+        { name: 'Herz', type: 'herz', color: '#ec4899', sound: 'assets/sounds/plopp.mp3' },
+        { name: 'Raute', type: 'raute', color: '#8b5cf6', sound: 'assets/sounds/plopp.mp3' }
+    ];
     const shapeLevels = { 1: ['Kreis', 'Quadrat', 'Stern'], 2: ['Kreis', 'Quadrat', 'Stern', 'Dreieck'], 3: ['Kreis', 'Quadrat', 'Stern', 'Dreieck', 'Herz', 'Raute'] };
 
-    // --- Globale Zustände ---
-    let currentQuizSet = null, isQuizMode = false, currentQuizItem = null, matchedShapes = 0, currentShapesInLevel = [];
+    // --- Globale ZustÃ¤nde ---
+    let currentQuizSet = null, isQuizMode = false, currentQuizItem = null, matchedShapes = 0, currentShapesInLevel = [], currentExploreInstruction = '';
 
     // --- DOM-Elemente ---
     const gameMenu = document.getElementById('game-menu'), gameView = document.getElementById('game-view'), gameHeader = document.getElementById('game-header'), backToMenuButton = document.getElementById('back-to-menu'), backToDashboardButton = document.getElementById('back-to-dashboard'), gameTitle = document.getElementById('game-title'), instructionText = document.getElementById('instruction-text'), tippGameBoard = document.getElementById('tipp-game-board'), shapeGameContainer = document.getElementById('shape-game-container'), shapeTargetsContainer = document.getElementById('shape-targets'), shapePiecesContainer = document.getElementById('shape-pieces'), quizButton = document.getElementById('quiz-button'), successOverlay = document.getElementById('success-overlay'), playAgainButton = document.getElementById('play-again-button');
@@ -76,10 +108,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function speak(text) { window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'de-DE'; utterance.rate = 0.9; window.speechSynthesis.speak(utterance); }
     
     function initializeModernMenu() {
-        const games = [ { id: 'tiere', icon: '🐾', title: 'Tier-Geräusche', description: 'Erkenne die Laute der Tiere' }, { id: 'fahrzeuge', icon: '🚗', title: 'Fahrzeug-Geräusche', description: 'Höre die Motoren und Sirenen' }, { id: 'formen', icon: '🧩', title: 'Formen-Spiel', description: 'Ziehe die Teile an den richtigen Platz' } ];
+        const games = [
+            { id: 'tiere', icon: '\u{1F43E}', title: 'Tier-Geraeusche', description: 'Erkenne die Laute der Tiere' },
+            { id: 'fahrzeuge', icon: '\u{1F697}', title: 'Fahrzeug-Geraeusche', description: 'Hoere die Motoren und Sirenen' },
+            { id: 'farben', icon: '\u{1F3A8}', title: 'Farbenzauber', description: 'Tippe Farben und hoere ihren Namen' },
+            { id: 'formen', icon: '\u{1F4D0}', title: 'Formen-Spiel', description: 'Ziehe die Teile an den richtigen Platz' }
+        ];
         const menuContainer = document.createElement('div');
         menuContainer.className = 'menu-container';
-        gameMenu.innerHTML = ''; // Leert das alte Menü
+        gameMenu.innerHTML = ''; // Leert das alte MenÃ¼
         games.forEach(game => {
             const card = document.createElement('div');
             card.className = 'game-select-card';
@@ -118,43 +155,140 @@ document.addEventListener('DOMContentLoaded', () => {
         tippGameBoard.classList.add('hidden');
         shapeGameContainer.classList.add('hidden');
         quizButton.classList.add('hidden');
-        
-        if (gameType === 'tiere') { 
-            updateHeader('game', 'Tier-Geräusche');
-            instructionText.textContent = 'Tippe auf ein Tier, um sein Geräusch zu hören.'; 
-            tippGameBoard.classList.remove('hidden'); 
-            quizButton.classList.remove('hidden'); 
-            setupTippspiel(tiere); 
-        } else if (gameType === 'fahrzeuge') { 
-            updateHeader('game', 'Fahrzeug-Geräusche');
-            instructionText.textContent = 'Tippe auf ein Fahrzeug, um sein Geräusch zu hören.'; 
-            tippGameBoard.classList.remove('hidden'); 
-            quizButton.classList.remove('hidden'); 
-            setupTippspiel(fahrzeuge); 
-        } else if (gameType === 'formen') { 
+        currentExploreInstruction = '';
+
+        if (gameType === 'tiere') {
+            updateHeader('game', 'Tier-Geraeusche');
+            currentExploreInstruction = 'Tippe auf ein Tier, um sein Geraeusch zu hoeren.';
+            instructionText.textContent = currentExploreInstruction;
+            tippGameBoard.classList.remove('hidden');
+            quizButton.classList.remove('hidden');
+            setupTippspiel(tiere);
+        } else if (gameType === 'fahrzeuge') {
+            updateHeader('game', 'Fahrzeug-Geraeusche');
+            currentExploreInstruction = 'Tippe auf ein Fahrzeug, um sein Geraeusch zu hoeren.';
+            instructionText.textContent = currentExploreInstruction;
+            tippGameBoard.classList.remove('hidden');
+            quizButton.classList.remove('hidden');
+            setupTippspiel(fahrzeuge);
+        } else if (gameType === 'farben') {
+            updateHeader('game', 'Farbenzauber');
+            currentExploreInstruction = 'Tippe auf eine Farbe, um ihren Namen zu hoeren.';
+            instructionText.textContent = currentExploreInstruction;
+            tippGameBoard.classList.remove('hidden');
+            quizButton.classList.remove('hidden');
+            setupTippspiel(farben);
+        } else if (gameType === 'formen') {
             updateHeader('game', 'Formen erkennen');
-            shapeGameContainer.classList.remove('hidden'); 
-            showFormenLevelSelector(); 
+            instructionText.textContent = 'Waehle ein Level aus.';
+            shapeGameContainer.classList.remove('hidden');
+            showFormenLevelSelector();
         }
     }
 
-    // --- LOGIK FÜR DAS TIPPSPIEL ---
-    function setupTippspiel(items) { currentQuizSet = items; isQuizMode = false; quizButton.textContent = 'Starte das Quiz!'; tippGameBoard.innerHTML = ''; items.forEach(item => { const card = document.createElement('div'); card.className = 'item-card rounded-2xl p-4 flex items-center justify-center'; card.addEventListener('click', () => handleTippCardClick(item, card)); const img = document.createElement('img'); img.src = item.image; img.alt = item.name; img.className = 'w-full h-auto object-cover rounded-lg select-none'; card.appendChild(img); tippGameBoard.appendChild(card); }); }
-    function handleTippCardClick(item, cardElement) { if (isQuizMode) { if (item.name === currentQuizItem.name) { speak('Super!'); cardElement.classList.add('correct'); new Audio(item.sound).play(); setTimeout(() => { cardElement.classList.remove('correct'); startQuiz(); }, 2000); } else { speak('Das ist nicht richtig.'); cardElement.classList.add('wrong'); setTimeout(() => cardElement.classList.remove('wrong'), 1000); } } else { speak(`Das ist ein ${item.name}.`); new Audio(item.sound).play(); } }
-    quizButton.addEventListener('click', () => { isQuizMode = !isQuizMode; if (isQuizMode) { startQuiz(); } else { quizButton.textContent = 'Starte das Quiz!'; instructionText.textContent = 'Tippe auf ein Objekt, um sein Geräusch zu hören.'; speak('Entdecker-Modus.'); } });
+    function setupTippspiel(items) {
+        currentQuizSet = items;
+        isQuizMode = false;
+        quizButton.textContent = 'Starte das Quiz!';
+        tippGameBoard.innerHTML = '';
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'item-card rounded-2xl p-4 flex items-center justify-center cursor-pointer';
+            card.style.minHeight = '200px';
+            card.addEventListener('click', () => handleTippCardClick(item, card));
+
+            if (item.image) {
+                const img = document.createElement('img');
+                img.src = item.image;
+                img.alt = item.name;
+                img.className = 'w-full h-auto object-cover rounded-lg select-none';
+                card.appendChild(img);
+            } else {
+                const panel = document.createElement('div');
+                panel.className = 'w-full h-full rounded-xl flex flex-col items-center justify-center gap-4 text-white text-center';
+                const baseColor = item.color || '#6366f1';
+                panel.style.background = `linear-gradient(135deg, ${hexToRgba(baseColor, 0.95)}, ${hexToRgba(baseColor, 0.65)})`;
+                panel.style.boxShadow = '0 10px 25px rgba(0,0,0,0.25)';
+                panel.style.padding = '2.5rem 1rem';
+                panel.style.textTransform = 'uppercase';
+                panel.style.letterSpacing = '0.05em';
+
+                const title = document.createElement('span');
+                title.className = 'font-extrabold text-2xl tracking-wide';
+                title.textContent = item.name;
+                panel.appendChild(title);
+
+                card.appendChild(panel);
+            }
+
+            tippGameBoard.appendChild(card);
+        });
+    }
+
+    function handleTippCardClick(item, cardElement) {
+        const audioSrc = item.sound;
+        const speechLine = item.speech || `Das ist ${item.name}.`;
+
+        if (isQuizMode) {
+            if (item.name === currentQuizItem.name) {
+                speak('Super!');
+                cardElement.classList.add('correct');
+                if (audioSrc) { new Audio(audioSrc).play(); }
+                setTimeout(() => {
+                    cardElement.classList.remove('correct');
+                    startQuiz();
+                }, 1600);
+            } else {
+                speak('Das ist nicht richtig.');
+                cardElement.classList.add('wrong');
+                setTimeout(() => cardElement.classList.remove('wrong'), 1000);
+            }
+        } else {
+            speak(speechLine);
+            if (audioSrc) { new Audio(audioSrc).play(); }
+        }
+    }
+
+    quizButton.addEventListener('click', () => {
+        isQuizMode = !isQuizMode;
+        if (isQuizMode) {
+            startQuiz();
+        } else {
+            quizButton.textContent = 'Starte das Quiz!';
+            instructionText.textContent = currentExploreInstruction || 'Tippe auf ein Objekt, um mehr zu entdecken.';
+            speak('Entdecker-Modus.');
+        }
+    });
     function startQuiz() { quizButton.textContent = 'Quiz beenden'; currentQuizItem = currentQuizSet[Math.floor(Math.random() * currentQuizSet.length)]; instructionText.textContent = `Wo ist: ${currentQuizItem.name}?`; speak(`Wo ist ${currentQuizItem.name}?`); }
 
-    // --- LOGIK FÜR DAS FORMEN-SPIEL ---
+    // --- LOGIK FÃœR DAS FORMEN-SPIEL ---
     function showFormenLevelSelector() {
-        shapePiecesContainer.innerHTML = ''; shapeTargetsContainer.innerHTML = ''; instructionText.textContent = 'Wähle ein Level aus.';
-        const levelContainer = document.createElement('div'); levelContainer.className = 'flex justify-center items-center gap-4 h-full';
-        Object.keys(shapeLevels).forEach(level => { const button = document.createElement('button'); button.className = 'bg-purple-600 hover:bg-purple-700 text-white font-bold py-6 px-10 rounded-2xl text-2xl transition-transform duration-200 hover:scale-105'; button.textContent = `Level ${level}`; button.onclick = () => startFormenspiel(level); levelContainer.appendChild(button); });
+        shapePiecesContainer.innerHTML = '';
+        shapeTargetsContainer.innerHTML = '';
+        instructionText.textContent = 'Waehle ein Level aus.';
+
+        const levelContainer = document.createElement('div');
+        levelContainer.className = 'flex justify-center items-center gap-4 h-full';
+
+        Object.keys(shapeLevels).forEach(level => {
+            const button = document.createElement('button');
+            button.className = 'bg-purple-600 hover:bg-purple-700 text-white font-bold py-6 px-10 rounded-2xl text-2xl transition-transform duration-200 hover:scale-105';
+            button.textContent = `Level ${level}`;
+            button.onclick = () => startFormenspiel(level);
+            levelContainer.appendChild(button);
+        });
+
         shapePiecesContainer.appendChild(levelContainer);
     }
+
     function startFormenspiel(level) {
-        const shapeNames = shapeLevels[level]; currentShapesInLevel = allShapes.filter(s => shapeNames.includes(s.name));
-        instructionText.textContent = 'Ziehe die bunten Formen in die passenden Lücken.'; setupFormenspiel();
+        const shapeNames = shapeLevels[level];
+        currentShapesInLevel = allShapes.filter(s => shapeNames.includes(s.name));
+        instructionText.textContent = 'Ziehe die bunten Formen in die passenden Luecken.';
+        setupFormenspiel();
     }
+
     function checkOverlap(rect1, rects) { for (const rect2 of rects) { if (!(rect1.right < rect2.left || rect1.left > rect2.right || rect1.bottom < rect2.top || rect1.top > rect2.bottom)) { return true; } } return false; }
     function setupFormenspiel() {
         shapePiecesContainer.innerHTML = ''; shapeTargetsContainer.innerHTML = ''; matchedShapes = 0;
@@ -184,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const form = allShapes.find(f => `target-${f.name}` === target.id); if (!form) return;
                 const targetRect = target.getBoundingClientRect(); const parentRect = shapeGameContainer.getBoundingClientRect(); element.style.transition = 'all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)'; element.style.left = `${targetRect.left - parentRect.left}px`; element.style.top = `${targetRect.top - parentRect.top}px`; element.style.transform = 'rotateX(0deg) rotateY(0deg) translateZ(0px) scale(1)'; element.style.boxShadow = 'none';
                 target.classList.add('target-filled');
-                target.classList.add('target-success-glow'); // Hinzufügen der Leucht-Klasse
+                target.classList.add('target-success-glow'); // HinzufÃ¼gen der Leucht-Klasse
                 target.style.backgroundColor = form.color;
                 target.style.borderColor = form.color; // Rahmenfarbe anpassen
                 for (let i = 0; i < 25; i++) { createSparkle(target); }
