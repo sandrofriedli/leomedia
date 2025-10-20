@@ -1,14 +1,32 @@
 <?php
 // api/db_connect.php
+// Database credentials are read from environment variables or an optional .env file next to this script.
 
-// --- DATENBANK-KONFIGURATION ---
-// Die Zugangsdaten für deine Datenbank bei myhosttech.
-$host = 'localhost';                 // Dein Servername, meistens 'localhost'
-$dbname = 'kinder_mediathek_db';     // Der Name deiner Datenbank
-$user = 'kinder_mediathek';          // Dein Datenbank-Benutzername
-$pass = 'lkje485!45-!';              // Dein Datenbank-Passwort
-$charset = 'utf8mb4';
-// --- ENDE KONFIGURATION ---
+$envFile = __DIR__ . '/.env';
+if (is_readable($envFile)) {
+    $loaded = parse_ini_file($envFile, false, INI_SCANNER_TYPED);
+    if (is_array($loaded)) {
+        foreach ($loaded as $key => $value) {
+            if (getenv($key) === false) {
+                putenv($key . '=' . $value);
+                $_ENV[$key] = $value;
+            }
+        }
+    }
+}
+
+$host = getenv('DB_HOST') ?: 'localhost';
+$dbname = getenv('DB_NAME') ?: '';
+$user = getenv('DB_USER') ?: '';
+$pass = getenv('DB_PASSWORD');
+$charset = getenv('DB_CHARSET') ?: 'utf8mb4';
+
+if ($dbname === '' || $user === '' || $pass === false || $pass === '') {
+    header('Content-Type: application/json');
+    http_response_code(500);
+    echo json_encode(['message' => 'Datenbankkonfiguration fehlt.']);
+    exit();
+}
 
 $dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
 $options = [
@@ -20,12 +38,8 @@ $options = [
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
 } catch (\PDOException $e) {
-    // Im Fehlerfall eine generische Nachricht ausgeben, um keine Details preiszugeben
     header('Content-Type: application/json');
     http_response_code(500);
     echo json_encode(['message' => 'Datenbankverbindung fehlgeschlagen.']);
-    // Für die Entwicklung kannst du die folgende Zeile einkommentieren, um den genauen Fehler zu sehen:
-    // throw new \PDOException($e->getMessage(), (int)$e->getCode());
     exit();
 }
-?>
