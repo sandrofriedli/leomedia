@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -9,95 +9,148 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/videos.css">
 </head>
-<body class="min-h-screen text-white">
-    <header class="bg-gray-800 shadow-md">
+<body class="bg-slate-950 text-white min-h-screen font-[Inter,sans-serif]">
+    <header class="bg-slate-900/80 backdrop-blur border-b border-slate-800">
         <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="index.html" class="text-2xl font-bold text-white">🎬 Leo's Mediathek</a>
-            <div id="auth-controls">
-                <a href="login.html?redirect=videos.html" class="btn-primary text-sm font-semibold py-2 px-4 rounded-lg">Login</a>
+            <a href="index.html" class="text-2xl font-bold text-white tracking-tight">Leo's Mediathek</a>
+            <div class="flex items-center gap-4">
+                <div id="add-video-btn-container" class="hidden">
+                    <button onclick="openFormModal()" class="btn-primary text-sm font-semibold py-2 px-4 rounded-lg flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"/></svg>
+                        Neue Serie
+                    </button>
+                </div>
+                <div id="auth-controls">
+                    <a href="login.html?redirect=videos.html" class="btn-primary text-sm font-semibold py-2 px-4 rounded-lg">Login</a>
+                </div>
             </div>
         </nav>
     </header>
 
-    <main class="container mx-auto p-4 md:p-8">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold text-white">Alle Videos</h1>
-            <div id="add-video-btn-container" class="hidden">
-                 <button onclick="openFormModal()" class="btn-primary font-semibold py-2 px-4 rounded-lg flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                    Neues Video
-                </button>
+    <main class="container mx-auto px-6 py-8 space-y-12">
+        <section id="heroSection" class="hero-section hidden">
+            <div class="hero-media" id="heroMedia"></div>
+            <div class="hero-content">
+                <div class="hero-meta-row">
+                    <span class="hero-age" id="heroAge"></span>
+                    <span class="hero-platform hidden" id="heroPlatform"></span>
+                </div>
+                <h1 id="heroTitle" class="hero-title"></h1>
+                <p id="heroSummary" class="hero-summary"></p>
+                <div class="hero-quickfacts" id="heroFacts"></div>
+                <div class="hero-tags" id="heroTags"></div>
+                <div class="hero-actions">
+                    <a id="heroWatchButton" class="btn-primary hero-action hidden" target="_blank" rel="noopener noreferrer">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6V4z"/></svg>
+                        Jetzt anschauen
+                    </a>
+                    <button id="heroDetailsButton" class="btn-secondary hero-action">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Mehr Infos
+                    </button>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <div id="videosGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-            <!-- Video-Karten werden hier per JS eingefügt -->
-        </div>
+        <section class="space-y-6">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold tracking-tight">Leo's Serienwelten</h2>
+                    <p class="text-slate-300 text-sm md:text-base mt-1 max-w-2xl">
+                        Altersgerechte Serien mit spielerischen Trailern und Stream-Hinweisen – wie bei den Großen, nur für Leo.
+                    </p>
+                </div>
+            </div>
+            <div id="videosEmptyState" class="hidden text-center py-12 text-slate-300 bg-slate-900/40 rounded-xl border border-slate-800">
+                <p class="text-lg font-semibold">Noch keine Serien hinterlegt.</p>
+                <p class="text-sm mt-2">Sobald über das Admin-Formular Inhalte hinterlegt sind, erscheinen hier die passenden Reihen.</p>
+            </div>
+            <div id="ageSections" class="space-y-12"></div>
+        </section>
     </main>
 
-    <!-- Detail Modal -->
-    <div id="detailModal" class="fixed inset-0 modal-backdrop items-center justify-center p-4 hidden z-50">
-        <div class="modal-content w-full max-w-3xl rounded-lg shadow-xl overflow-hidden relative">
-            <button onclick="closeDetailModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl z-10">&times;</button>
-            <div id="detailModalContent" class="max-h-[90vh] overflow-y-auto">
-                <!-- Inhalt wird per JS geladen -->
-            </div>
+    <div id="detailModal" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4 z-50">
+        <div class="modal-content w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden relative">
+            <button onclick="closeDetailModal()" class="absolute top-4 right-4 text-slate-200 hover:text-white text-3xl z-10">&times;</button>
+            <div id="detailModalContent" class="max-h-[90vh] overflow-y-auto bg-slate-950"></div>
         </div>
     </div>
 
-    <!-- Formular Modal für Hinzufügen/Bearbeiten -->
-    <div id="formModal" class="fixed inset-0 modal-backdrop items-center justify-center p-4 hidden z-50">
-        <div class="modal-content w-full max-w-lg rounded-lg shadow-xl overflow-hidden">
+    <div id="formModal" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4 z-50">
+        <div class="modal-content w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden bg-slate-900 border border-slate-800">
             <form id="videoForm" class="w-full">
                 <input type="hidden" id="videoId" name="id">
-                <div class="flex justify-between items-center p-4 border-b border-gray-700">
-                    <h2 id="formModalTitle" class="text-2xl font-bold">Neues Video</h2>
-                    <button type="button" onclick="closeFormModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                <div class="flex justify-between items-center p-6 border-b border-slate-800">
+                    <h2 id="formModalTitle" class="text-2xl font-bold">Neue Serie</h2>
+                    <button type="button" onclick="closeFormModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
                 </div>
-                <div class="p-6 max-h-[70vh] overflow-y-auto">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-6 max-h-[70vh] overflow-y-auto space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
-                            <label for="videoTitle" class="block text-sm font-medium text-gray-300 mb-1">Titel</label>
-                            <input type="text" id="videoTitle" name="title" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white" required>
+                            <label for="videoTitle" class="form-label">Titel *</label>
+                            <input type="text" id="videoTitle" name="title" class="form-input" required>
                         </div>
                         <div>
-                             <label for="posterUrl" class="block text-sm font-medium text-gray-300 mb-1">Poster URL</label>
-                            <input type="url" id="posterUrl" name="posterUrl" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white" required>
+                            <label for="posterUrl" class="form-label">Poster / Key Art URL *</label>
+                            <input type="url" id="posterUrl" name="posterUrl" class="form-input" placeholder="https://..." required>
                         </div>
                         <div>
-                            <label for="age" class="block text-sm font-medium text-gray-300 mb-1">Alter</label>
-                            <select id="age" name="age" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white" required>
-                                <option value="0">Ab 0</option>
-                                <option value="2">Ab 2</option>
-                                <option value="3">Ab 3</option>
-                                <option value="6">Ab 6</option>
+                            <label for="previewUrl" class="form-label">Vorschau-Video URL</label>
+                            <input type="url" id="previewUrl" name="previewUrl" class="form-input" placeholder="MP4 oder YouTube-Link">
+                        </div>
+                        <div>
+                            <label for="trailerUrl" class="form-label">Detail-Trailer URL</label>
+                            <input type="url" id="trailerUrl" name="trailerUrl" class="form-input" placeholder="YouTube oder MP4">
+                        </div>
+                        <div>
+                            <label for="age" class="form-label">Mindestalter *</label>
+                            <select id="age" name="age" class="form-input" required>
+                                <option value="">-- bitte wählen --</option>
+                                <option value="0">Ab 0 Jahren</option>
+                                <option value="2">Ab 2 Jahren</option>
+                                <option value="3">Ab 3 Jahren</option>
+                                <option value="4">Ab 4 Jahren</option>
+                                <option value="5">Ab 5 Jahren</option>
+                                <option value="6">Ab 6 Jahren</option>
                             </select>
                         </div>
                         <div>
-                            <label for="platform" class="block text-sm font-medium text-gray-300 mb-1">Plattform</label>
-                            <input type="text" id="platform" name="platform" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white" placeholder="z.B. YouTube, KiKA">
-                        </div>
-                         <div>
-                            <label for="firstAired" class="block text-sm font-medium text-gray-300 mb-1">Erstausstrahlung</label>
-                            <input type="text" id="firstAired" name="firstAired" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white" placeholder="z.B. 2018">
+                            <label for="platform" class="form-label">Streaming-Plattform</label>
+                            <input type="text" id="platform" name="platform" class="form-input" placeholder="z. B. Netflix, YouTube, Disney+">
                         </div>
                         <div>
-                            <label for="imdbRating" class="block text-sm font-medium text-gray-300 mb-1">IMDb Rating</label>
-                            <input type="text" id="imdbRating" name="imdbRating" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white" placeholder="z.B. 8.5">
+                            <label for="platformUrl" class="form-label">Streaming-Link</label>
+                            <input type="url" id="platformUrl" name="platformUrl" class="form-input" placeholder="Direkter Link zur Serie">
                         </div>
-                        <div class="md:col-span-2">
-                             <label for="tags" class="block text-sm font-medium text-gray-300 mb-1">Tags (kommagetrennt)</label>
-                            <input type="text" id="tags" name="tags" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white" placeholder="z.B. Tiere, Abenteuer">
+                        <div>
+                            <label for="platformLogo" class="form-label">Logo URL</label>
+                            <input type="text" id="platformLogo" name="platformLogo" class="form-input" placeholder="assets/logos/netflix.svg">
                         </div>
-                         <div class="md:col-span-2">
-                            <label for="summary" class="block text-sm font-medium text-gray-300 mb-1">Zusammenfassung</label>
-                            <textarea id="summary" name="summary" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"></textarea>
+                        <div>
+                            <label for="firstAired" class="form-label">Erstausstrahlung</label>
+                            <input type="text" id="firstAired" name="firstAired" class="form-input" placeholder="z. B. 2018">
+                        </div>
+                        <div>
+                            <label for="imdbRating" class="form-label">IMDb Rating</label>
+                            <input type="text" id="imdbRating" name="imdbRating" class="form-input" placeholder="z. B. 8.5">
                         </div>
                     </div>
+                    <div>
+                        <label for="tags" class="form-label">Tags (kommagetrennt)</label>
+                        <input type="text" id="tags" name="tags" class="form-input" placeholder="Abenteuer, Tiere, Musik">
+                    </div>
+                    <div>
+                        <label for="summary" class="form-label">Kurzbeschreibung *</label>
+                        <textarea id="summary" name="summary" rows="3" class="form-textarea" required></textarea>
+                    </div>
+                    <div>
+                        <label for="watchHint" class="form-label">Hinweis zum Anschauen</label>
+                        <textarea id="watchHint" name="watchHint" rows="2" class="form-textarea" placeholder="z. B. Diese Serie läuft aktuell bei KiKA in der Mediathek."></textarea>
+                    </div>
                 </div>
-                <div class="p-4 bg-gray-800 text-right space-x-2">
-                    <button type="button" onclick="closeFormModal()" class="btn-secondary font-semibold py-2 px-4 rounded-lg">Abbrechen</button>
-                    <button type="submit" class="btn-primary font-semibold py-2 px-4 rounded-lg">Speichern</button>
+                <div class="p-6 bg-slate-900/80 border-t border-slate-800 flex justify-end gap-3">
+                    <button type="button" onclick="closeFormModal()" class="btn-secondary px-4 py-2 rounded-lg">Abbrechen</button>
+                    <button type="submit" class="btn-primary px-4 py-2 rounded-lg">Speichern</button>
                 </div>
             </form>
         </div>

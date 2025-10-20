@@ -1,4 +1,16 @@
-const videosGrid = document.getElementById('videosGrid');
+const heroSection = document.getElementById('heroSection');
+const heroMedia = document.getElementById('heroMedia');
+const heroAge = document.getElementById('heroAge');
+const heroPlatform = document.getElementById('heroPlatform');
+const heroTitle = document.getElementById('heroTitle');
+const heroSummary = document.getElementById('heroSummary');
+const heroFacts = document.getElementById('heroFacts');
+const heroTags = document.getElementById('heroTags');
+const heroWatchButton = document.getElementById('heroWatchButton');
+const heroDetailsButton = document.getElementById('heroDetailsButton');
+const ageSections = document.getElementById('ageSections');
+const videosEmptyState = document.getElementById('videosEmptyState');
+
 const formModal = document.getElementById('formModal');
 const detailModal = document.getElementById('detailModal');
 const detailModalContent = document.getElementById('detailModalContent');
@@ -7,29 +19,48 @@ const videoForm = document.getElementById('videoForm');
 const authControls = document.getElementById('auth-controls');
 const addVideoBtnContainer = document.getElementById('add-video-btn-container');
 
-const VIDEO_COLOR_MAP = {
-    'peppa pig': '#f472b6',
-    'paw patrol': '#3b82f6',
-    'bluey': '#60a5fa',
-    'cocomelon': '#f97316',
-    'feuerwehrmann sam': '#facc15',
-    'bob der baumeister': '#f59e0b',
-    'die sendung mit der maus': '#f97316',
-    'loewenzahn': '#22c55e',
-    'sesamstrasse': '#facc15',
-    'die biene maja': '#fcd34d',
-    'heidi': '#fb7185',
-    'wickie und die starken maenner': '#38bdf8',
-    'bobo siebenschlaefer': '#a855f7',
-    'der kleine prinz': '#818cf8',
-    'fieps': '#34d399',
-    'nils holgersson': '#93c5fd',
-    'pinocchio': '#fb7185',
-    'der kleine drache kokosnuss': '#f97316'
+const AGE_BRACKETS = [
+    {
+        id: 'mini',
+        title: 'Kuschelige Serien (0-2 Jahre)',
+        description: 'Ruhige Geschichten mit viel Wärme, perfekt für Leo zum Entspannen.',
+        min: 0,
+        max: 2
+    },
+    {
+        id: 'discover',
+        title: 'Entdecker*innen (3-4 Jahre)',
+        description: 'Humorvolle Serien zum Mitfiebern, die spielerisch Wissen vermitteln.',
+        min: 3,
+        max: 4
+    },
+    {
+        id: 'heroes',
+        title: 'Abenteuer ab 5 Jahren',
+        description: 'Actionreiche und mutmachende Serien für große Leo-Abenteuer.',
+        min: 5,
+        max: 12
+    }
+];
+
+const PLATFORM_LOGO_MAP = {
+    netflix: 'assets/logos/netflix.svg',
+    'netflix kids': 'assets/logos/netflix.svg',
+    youtube: 'assets/logos/youtube.svg',
+    'youtube kids': 'assets/logos/youtube.svg',
+    'disney+': 'assets/logos/disney-plus.svg',
+    'disney plus': 'assets/logos/disney-plus.svg',
+    'prime video': 'assets/logos/prime-video.svg',
+    'amazon prime': 'assets/logos/prime-video.svg',
+    kika: 'assets/logos/kika.svg',
+    'kika mediathek': 'assets/logos/kika.svg',
+    ard: 'assets/logos/ard-mediathek.svg',
+    'ard mediathek': 'assets/logos/ard-mediathek.svg'
 };
 
 let allVideos = [];
 let loggedIn = false;
+let featuredVideoId = null;
 
 async function fetchVideos() {
     try {
@@ -41,112 +72,300 @@ async function fetchVideos() {
         }
 
         const videos = await response.json();
-        allVideos = videos;
+        allVideos = Array.isArray(videos) ? videos : [];
         renderVideos(allVideos);
     } catch (error) {
-        videosGrid.innerHTML = `
-            <p class="text-red-400 col-span-full text-center">
-                Fehler beim Laden der Videos. Ueberpruefe die API-Verbindung und die Datenbank-Struktur. Details: ${escapeHtml(error.message || 'Unbekannter Fehler')}
-            </p>
-        `;
+        allVideos = [];
+        renderVideos(allVideos, error.message || 'Unbekannter Fehler beim Laden der Videos.');
     }
 }
 
-function renderVideos(videos) {
-    videosGrid.innerHTML = '';
+function renderVideos(videos, errorMessage = '') {
+    ageSections.innerHTML = '';
 
-    if (!videos || videos.length === 0) {
-        videosGrid.innerHTML = `
-            <p class="text-gray-400 col-span-full text-center">Noch keine Videos vorhanden.</p>
-        `;
+    if (!Array.isArray(videos) || videos.length === 0) {
+        heroSection.classList.add('hidden');
+        videosEmptyState.classList.remove('hidden');
+        if (errorMessage) {
+            videosEmptyState.innerHTML = `
+                <p class="text-lg font-semibold text-red-300">Fehler beim Laden</p>
+                <p class="text-sm mt-2 text-red-200">${escapeHtml(errorMessage)}</p>
+            `;
+        } else {
+            videosEmptyState.innerHTML = `
+                <p class="text-lg font-semibold">Noch keine Serien hinterlegt.</p>
+                <p class="text-sm mt-2">Sobald Inhalte in der Datenbank stehen, erscheinen sie hier automatisch.</p>
+            `;
+        }
         return;
     }
 
-    videos.forEach((video) => {
-        const card = document.createElement('div');
-        card.className = 'video-card';
-        card.addEventListener('click', () => openDetailModal(video));
+    videosEmptyState.classList.add('hidden');
 
-        const safeTitle = escapeHtml(video.title || '');
-        const safeSummary = escapeHtml(video.summary || 'Keine Beschreibung verfuegbar.');
-        const safePlatform = escapeHtml(video.platform || '');
-        const safeTags = extractSafeTags(video.tags);
-        const ageLabel = Number(video.age) || 0;
-        const colorInfo = getVideoColorInfo(video);
+    const featured = selectFeaturedVideo(videos);
+    featuredVideoId = featured ? featured.id : null;
 
-        let adminControlsHTML = '';
-        if (loggedIn) {
-            adminControlsHTML = `
-                <div class="admin-controls absolute top-2 right-2 flex gap-2 z-10">
-                    <button type="button" class="delete-video-btn bg-red-600 hover:bg-red-700 text-white p-2 rounded-full w-8 h-8 flex items-center justify-center shadow-lg" data-video-id="${Number(video.id)}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>
-                    <button type="button" class="edit-video-btn bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
-                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z"></path></svg>
-                    </button>
-                </div>
-            `;
+    if (featured) {
+        heroSection.classList.remove('hidden');
+        renderHero(featured);
+    } else {
+        heroSection.classList.add('hidden');
+    }
+
+    renderAgeSections(videos);
+}
+
+function selectFeaturedVideo(videos) {
+    if (!Array.isArray(videos) || videos.length === 0) {
+        return null;
+    }
+
+    const ratedVideos = videos
+        .filter((video) => !Number.isNaN(parseFloat(video.imdbRating)))
+        .sort((a, b) => parseFloat(b.imdbRating || 0) - parseFloat(a.imdbRating || 0));
+
+    if (ratedVideos.length > 0) {
+        return ratedVideos[0];
+    }
+
+    // Fallback: nimm das erste Video, falls keine Bewertung vorhanden ist
+    return videos[0];
+}
+
+function renderHero(video) {
+    const safeTitle = escapeHtml(video.title || 'Unbenannte Serie');
+    const summary = video.summary || 'Noch keine Beschreibung vorhanden.';
+    const age = getAge(video);
+    const tags = extractSafeTags(video.tags);
+    const platformName = video.platform ? video.platform.trim() : '';
+    const facts = [];
+
+    heroMedia.innerHTML = createHeroMediaMarkup(video, safeTitle);
+    heroTitle.textContent = video.title || 'Unbenannte Serie';
+    heroSummary.textContent = summary;
+
+    heroAge.textContent = `Ab ${age} Jahren`;
+
+    if (platformName) {
+        heroPlatform.textContent = platformName;
+        heroPlatform.classList.remove('hidden');
+    } else {
+        heroPlatform.classList.add('hidden');
+    }
+
+    if (video.firstAired) {
+        facts.push(`<span><svg class="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2h-1V3a1 1 0 00-1-1H6z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zm-11 3a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0z" clip-rule="evenodd"/></svg>${escapeHtml(String(video.firstAired))}</span>`);
+    }
+
+    if (video.imdbRating) {
+        facts.push(`<span><svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.143 3.513a1 1 0 00.95.69h3.688c.969 0 1.371 1.24.588 1.81l-2.985 2.17a1 1 0 00-.364 1.118l1.143 3.513c.3.921-.755 1.688-1.54 1.118l-2.985-2.17a1 1 0 00-1.175 0l-2.985 2.17c-.784.57-1.838-.197-1.539-1.118l1.142-3.513a1 1 0 00-.364-1.118l-2.985-2.17c-.783-.57-.38-1.81.588-1.81h3.689a1 1 0 00.95-.69l1.143-3.513z"/></svg>${escapeHtml(String(video.imdbRating))} IMDb</span>`);
+    }
+
+    if (facts.length > 0) {
+        heroFacts.innerHTML = facts.join('');
+        heroFacts.classList.remove('hidden');
+    } else {
+        heroFacts.classList.add('hidden');
+    }
+
+    if (tags.length > 0) {
+        heroTags.innerHTML = tags.map((tag) => `<span>${tag}</span>`).join('');
+        heroTags.classList.remove('hidden');
+    } else {
+        heroTags.innerHTML = '';
+        heroTags.classList.add('hidden');
+    }
+
+    const watchLink = (video.platformUrl || '').trim();
+    if (watchLink) {
+        heroWatchButton.href = watchLink;
+        heroWatchButton.classList.remove('hidden');
+    } else {
+        heroWatchButton.classList.add('hidden');
+        heroWatchButton.removeAttribute('href');
+    }
+
+    heroWatchButton.onclick = (event) => {
+        if (!watchLink) {
+            event.preventDefault();
+        }
+    };
+
+    heroDetailsButton.onclick = () => openDetailModal(video);
+}
+
+function renderAgeSections(videos) {
+    ageSections.innerHTML = '';
+
+    AGE_BRACKETS.forEach((bracket) => {
+        const filteredVideos = videos.filter((video) => {
+            const age = getAge(video);
+            return age >= bracket.min && age <= bracket.max;
+        });
+
+        if (filteredVideos.length === 0) {
+            return;
         }
 
-        card.innerHTML = `
-            ${adminControlsHTML}
-            <div class="video-color-block" style="background-color:${colorInfo.background}; color:${colorInfo.text};">
-                ${safePlatform ? `<span class="video-color-block__platform">${safePlatform}</span>` : ''}
-                <span class="video-color-block__title">${safeTitle}</span>
-            </div>
-            <div class="video-card-content">
-                <p class="video-card-summary">${safeSummary}</p>
-                <div class="video-card-meta">
-                    <span class="video-age-badge">Ab ${ageLabel} J.</span>
-                    ${safeTags
-                        .slice(0, 3)
-                        .map((tag) => `<span class="video-tag">${tag}</span>`)
-                        .join('')}
+        const section = document.createElement('section');
+        section.className = 'space-y-4';
+        section.setAttribute('data-age-section', bracket.id);
+
+        section.innerHTML = `
+            <div class="age-section-header">
+                <div>
+                    <h3>${escapeHtml(bracket.title)}</h3>
+                    <p>${escapeHtml(bracket.description)}</p>
                 </div>
             </div>
         `;
 
-        const deleteBtn = card.querySelector('.delete-video-btn');
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                const id = Number(deleteBtn.dataset.videoId);
-                if (!Number.isNaN(id)) {
-                    deleteVideo(id);
-                }
-            });
-        }
+        const row = document.createElement('div');
+        row.className = 'series-row';
 
-        const editBtn = card.querySelector('.edit-video-btn');
-        if (editBtn) {
-            editBtn.addEventListener('click', (event) => {
-                event.preventDefault();
+        filteredVideos.forEach((video) => {
+            const card = createSeriesCard(video);
+            row.appendChild(card);
+        });
+
+        section.appendChild(row);
+        ageSections.appendChild(section);
+    });
+}
+
+function createSeriesCard(video) {
+    const card = document.createElement('article');
+    card.className = 'series-card';
+    card.dataset.videoId = String(video.id || '');
+    card.addEventListener('click', () => openDetailModal(video));
+
+    const safeTitle = escapeHtml(video.title || 'Unbenannte Serie');
+    const rawSummary = video.summary || 'Noch keine Beschreibung vorhanden.';
+    const cardSummary = escapeHtml(truncateText(rawSummary, 140));
+    const tags = extractSafeTags(video.tags).slice(0, 4);
+    const age = getAge(video);
+    const platformName = video.platform ? escapeHtml(video.platform) : '';
+    const previewMedia = createCardPreviewMarkup(video, safeTitle);
+
+    const adminControlsHtml = loggedIn
+        ? `
+            <div class="admin-controls">
+                <button type="button" class="admin-button edit" title="Bearbeiten">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5h2m6.414 1.586a2 2 0 010 2.828l-7.778 7.778a2 2 0 01-1.006.535l-3.49.698a1 1 0 01-1.176-1.176l.698-3.49a2 2 0 01.535-1.006l7.778-7.778a2 2 0 012.828 0z"/>
+                    </svg>
+                </button>
+                <button type="button" class="admin-button delete" title="Löschen">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-3h4a1 1 0 011 1v2H9V5a1 1 0 011-1zM4 7h16"/>
+                    </svg>
+                </button>
+            </div>
+        `
+        : '';
+
+    card.innerHTML = `
+        ${adminControlsHtml}
+        <div class="preview-wrapper">
+            ${previewMedia}
+            <div class="preview-overlay">
+                <span class="age-badge">Ab ${age} J.</span>
+                ${platformName ? `<span class="preview-platform">${platformName}</span>` : ''}
+            </div>
+        </div>
+        <div class="info">
+            <div class="title-row">
+                <h4>${safeTitle}</h4>
+            </div>
+            <p>${cardSummary}</p>
+            ${tags.length > 0 ? `<div class="tags">${tags.map((tag) => `<span>${tag}</span>`).join('')}</div>` : ''}
+        </div>
+    `;
+
+    if (loggedIn) {
+        const editButton = card.querySelector('.admin-button.edit');
+        const deleteButton = card.querySelector('.admin-button.delete');
+
+        if (editButton) {
+            editButton.addEventListener('click', (event) => {
                 event.stopPropagation();
                 openFormModal(video);
             });
         }
 
-        videosGrid.appendChild(card);
-    });
+        if (deleteButton) {
+            deleteButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                deleteVideo(video.id);
+            });
+        }
+    }
+
+    return card;
+}
+
+function createHeroMediaMarkup(video, safeTitle) {
+    const previewUrl = (video.previewUrl || '').trim();
+    const posterUrl = (video.posterUrl || '').trim();
+
+    if (previewUrl) {
+        if (isYouTubeUrl(previewUrl)) {
+            const embedUrl = buildYouTubeEmbedUrl(previewUrl, { autoplay: 1, mute: 1, loop: 1, controls: 0 });
+            if (embedUrl) {
+                return `<iframe src="${embedUrl}" title="Vorschau ${safeTitle}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+            }
+        } else if (isDirectVideoFile(previewUrl)) {
+            return `<video src="${escapeAttribute(previewUrl)}" autoplay muted loop playsinline ${posterUrl ? `poster="${escapeAttribute(posterUrl)}"` : ''}></video>`;
+        }
+    }
+
+    if (posterUrl) {
+        return `<img src="${escapeAttribute(posterUrl)}" alt="Poster ${safeTitle}" class="hero-poster">`;
+    }
+
+    return `<div class="h-full w-full flex items-center justify-center text-slate-400 text-sm bg-slate-900">Keine Vorschau vorhanden</div>`;
+}
+
+function createCardPreviewMarkup(video, safeTitle) {
+    const posterUrl = (video.posterUrl || '').trim();
+    const previewUrl = (video.previewUrl || '').trim();
+    const parts = [];
+
+    if (posterUrl) {
+        parts.push(`<img src="${escapeAttribute(posterUrl)}" alt="Poster ${safeTitle}">`);
+    } else {
+        parts.push(`<div class="h-full w-full flex items-center justify-center text-slate-400 text-sm bg-slate-900">Keine Grafik</div>`);
+    }
+
+    if (previewUrl && isDirectVideoFile(previewUrl)) {
+        parts.push(`<video src="${escapeAttribute(previewUrl)}" muted loop playsinline preload="metadata"></video>`);
+    }
+
+    return parts.join('');
 }
 
 function openFormModal(video = null) {
     videoForm.reset();
+    document.getElementById('videoId').value = '';
 
     if (video) {
-        formModalTitle.textContent = 'Video bearbeiten';
-        document.getElementById('videoId').value = video.id;
-        document.getElementById('videoTitle').value = video.title;
-        document.getElementById('posterUrl').value = video.posterUrl;
-        document.getElementById('age').value = video.age;
-        document.getElementById('platform').value = video.platform;
-        document.getElementById('firstAired').value = video.firstAired;
-        document.getElementById('imdbRating').value = video.imdbRating;
-        document.getElementById('tags').value = video.tags;
-        document.getElementById('summary').value = video.summary;
+        formModalTitle.textContent = 'Serie bearbeiten';
+        document.getElementById('videoId').value = video.id || '';
+        document.getElementById('videoTitle').value = video.title || '';
+        document.getElementById('posterUrl').value = video.posterUrl || '';
+        document.getElementById('previewUrl').value = video.previewUrl || '';
+        document.getElementById('trailerUrl').value = video.trailerUrl || '';
+        document.getElementById('age').value = video.age || '';
+        document.getElementById('platform').value = video.platform || '';
+        document.getElementById('platformUrl').value = video.platformUrl || '';
+        document.getElementById('platformLogo').value = video.platformLogo || '';
+        document.getElementById('firstAired').value = video.firstAired || '';
+        document.getElementById('imdbRating').value = video.imdbRating || '';
+        document.getElementById('tags').value = video.tags || '';
+        document.getElementById('summary').value = video.summary || '';
+        document.getElementById('watchHint').value = video.watchHint || '';
     } else {
-        formModalTitle.textContent = 'Neues Video hinzufuegen';
+        formModalTitle.textContent = 'Neue Serie';
     }
 
     formModal.classList.remove('hidden');
@@ -159,41 +378,60 @@ function closeFormModal() {
 }
 
 function openDetailModal(video) {
-    const safeTitle = escapeHtml(video.title || '');
-    const safeSummary = escapeHtml(video.summary || 'Keine Beschreibung verfuegbar.');
-    const safeTags = extractSafeTags(video.tags);
-    const ageLabel = Number(video.age) || 0;
-    const firstAired = escapeHtml(video.firstAired || '');
-    const imdbRating = escapeHtml(video.imdbRating || '');
-    const safePlatform = escapeHtml(video.platform || '');
-    const colorInfo = getVideoColorInfo(video);
+    const safeTitle = escapeHtml(video.title || 'Unbenannte Serie');
+    const summary = escapeHtml(video.summary || 'Noch keine Beschreibung vorhanden.');
+    const fullTags = extractSafeTags(video.tags);
+    const age = getAge(video);
+    const platformName = video.platform ? escapeHtml(video.platform) : '';
+    const posterUrl = video.posterUrl ? escapeAttribute(video.posterUrl) : '';
+    const streamLogo = getPlatformLogo(video);
+    const watchLink = (video.platformUrl || '').trim();
+    const watchHint = video.watchHint || '';
+    const detailTags = fullTags.length
+        ? `<div class="hero-tags mt-6">${fullTags.map((tag) => `<span>${tag}</span>`).join('')}</div>`
+        : '';
+
+    const metaItems = [
+        `Empfohlen ab ${age} Jahren`
+    ];
+
+    if (video.firstAired) {
+        metaItems.push(`Erstausstrahlung ${escapeHtml(String(video.firstAired))}`);
+    }
+
+    if (video.imdbRating) {
+        metaItems.push(`IMDb ${escapeHtml(String(video.imdbRating))}`);
+    }
+
+    const trailerMarkup = createTrailerMarkup(video, safeTitle);
+    const streamingCallout = createStreamingCallout(platformName, streamLogo, watchLink, watchHint);
 
     detailModalContent.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="md:col-span-1">
-                <div class="detail-color-block" style="background-color:${colorInfo.background}; color:${colorInfo.text};">
-                    ${safePlatform ? `<span class="video-color-block__platform">${safePlatform}</span>` : ''}
-                    <span class="video-color-block__title">${safeTitle}</span>
+        <section class="detail-hero">
+            ${posterUrl ? `<img src="${posterUrl}" alt="Poster ${safeTitle}">` : ''}
+            <div class="detail-hero-content">
+                <div class="hero-meta-row">
+                    <span class="hero-age">Ab ${age} Jahren</span>
+                    ${platformName ? `<span class="hero-platform">${platformName}</span>` : ''}
+                </div>
+                <h2 class="hero-title">${safeTitle}</h2>
+                <p class="hero-summary">${summary}</p>
+                ${detailTags}
+            </div>
+        </section>
+        <section class="detail-body">
+            <div>
+                <h3>Darum geht's</h3>
+                <p class="text-slate-300 leading-relaxed">${summary}</p>
+                <div class="detail-meta mt-6">
+                    ${metaItems.map((item) => `<span>${item}</span>`).join('')}
                 </div>
             </div>
-            <div class="md:col-span-2 p-4 space-y-6">
-                <div>
-                    <div class="detail-meta">
-                        ${firstAired ? `<span>Erstausstrahlung: ${firstAired}</span>` : ''}
-                        ${imdbRating ? `<span>IMDb: ${imdbRating} / 10</span>` : ''}
-                        <span>Ab ${ageLabel} J.</span>
-                    </div>
-                </div>
-                <p class="text-gray-300 leading-relaxed">${safeSummary}</p>
-                ${
-                    safeTags.length
-                        ? `<div class="detail-tags">${safeTags
-                              .map((tag) => `<span class="detail-tag">${tag}</span>`)
-                              .join('')}</div>`
-                        : ''
-                }
-            </div>
-        </div>
+            <aside class="space-y-6">
+                ${streamingCallout}
+                ${trailerMarkup ? `<div><h3>Trailer</h3><div class="detail-trailer">${trailerMarkup}</div></div>` : ''}
+            </aside>
+        </section>
     `;
 
     detailModal.classList.remove('hidden');
@@ -203,6 +441,63 @@ function openDetailModal(video) {
 function closeDetailModal() {
     detailModal.classList.add('hidden');
     detailModal.classList.remove('flex');
+    detailModalContent.innerHTML = '';
+}
+
+function createStreamingCallout(platformName, streamLogo, watchLink, watchHint) {
+    if (!platformName && !streamLogo && !watchLink && !watchHint) {
+        return '';
+    }
+
+    const displayName = platformName || 'Streaming-Plattform';
+    const description = watchHint
+        ? watchHint
+        : watchLink
+            ? `Mit einem Klick geht es zu ${displayName}.`
+            : 'Frag Mama oder Papa, wo du die Serie schauen kannst.';
+
+    return `
+        <div class="streaming-callout">
+            <div class="flex items-center gap-4">
+                ${streamLogo ? `<img src="${escapeAttribute(streamLogo)}" alt="${displayName} Logo" class="platform-logo">` : ''}
+                <div>
+                    <strong>${displayName}</strong>
+                    <p class="text-slate-300 text-sm">${escapeHtml(description)}</p>
+                </div>
+            </div>
+            <div class="streaming-actions">
+                ${watchLink
+                    ? `<a href="${escapeAttribute(watchLink)}" target="_blank" rel="noopener noreferrer" class="watch-link">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6V4z"/></svg>
+                        Auf ${displayName} schauen
+                    </a>`
+                    : ''}
+                ${watchHint && !watchLink ? `<span class="platform-hint">${escapeHtml(watchHint)}</span>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function createTrailerMarkup(video, safeTitle) {
+    const trailerCandidate = (video.trailerUrl || video.previewUrl || '').trim();
+    const posterUrl = video.posterUrl ? escapeAttribute(video.posterUrl) : '';
+
+    if (!trailerCandidate) {
+        return '';
+    }
+
+    if (isYouTubeUrl(trailerCandidate)) {
+        const embedUrl = buildYouTubeEmbedUrl(trailerCandidate, { autoplay: 0, mute: 0, loop: 0, controls: 1 });
+        if (embedUrl) {
+            return `<iframe src="${embedUrl}" title="Trailer ${safeTitle}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+        }
+    }
+
+    if (isDirectVideoFile(trailerCandidate)) {
+        return `<video src="${escapeAttribute(trailerCandidate)}" controls playsinline ${posterUrl ? `poster="${posterUrl}"` : ''}></video>`;
+    }
+
+    return '';
 }
 
 videoForm.addEventListener('submit', async (event) => {
@@ -225,12 +520,16 @@ videoForm.addEventListener('submit', async (event) => {
             alert('Fehler: ' + result.message);
         }
     } catch (error) {
-        alert('Ein Fehler ist aufgetreten.');
+        alert('Ein Fehler ist aufgetreten: ' + error.message);
     }
 });
 
 async function deleteVideo(id) {
-    if (!confirm('Bist du sicher, dass du dieses Video loeschen moechtest?')) {
+    if (!id) {
+        return;
+    }
+
+    if (!confirm('Bist du sicher, dass du diese Serie löschen möchtest?')) {
         return;
     }
 
@@ -241,10 +540,10 @@ async function deleteVideo(id) {
         if (result.status === 'success') {
             fetchVideos();
         } else {
-            alert('Fehler beim Loeschen: ' + result.message);
+            alert('Fehler beim Löschen: ' + result.message);
         }
     } catch (error) {
-        alert('Ein Fehler ist aufgetreten.');
+        alert('Ein Fehler ist aufgetreten: ' + error.message);
     }
 }
 
@@ -252,7 +551,7 @@ async function checkLoginStatus() {
     try {
         const response = await fetch('./api/check_login.php');
         const data = await response.json();
-        loggedIn = data.loggedIn;
+        loggedIn = Boolean(data.loggedIn);
     } catch (error) {
         loggedIn = false;
     }
@@ -278,59 +577,22 @@ async function logout() {
     window.location.reload();
 }
 
-function getVideoColorInfo(video) {
-    const background = getSeriesColor(video);
-    return {
-        background,
-        text: getReadableTextColor(background)
-    };
-}
-
-function getSeriesColor(video) {
-    const key = String(video.title || '').trim().toLowerCase();
-    return VIDEO_COLOR_MAP[key] || '#4b5563';
-}
-
-function getReadableTextColor(hexColor) {
-    const rgb = hexToRgb(hexColor);
-    if (!rgb) {
-        return '#f8fafc';
+function getAge(video) {
+    const value = Number(video.age);
+    if (Number.isNaN(value) || value < 0) {
+        return 0;
     }
-
-    const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
-    return luminance > 0.6 ? '#111827' : '#f8fafc';
+    return value;
 }
 
-function hexToRgb(hex) {
-    const cleanHex = hex.replace('#', '').trim();
-
-    if (!(cleanHex.length === 3 || cleanHex.length === 6)) {
-        return null;
+function truncateText(value, length) {
+    if (!value) {
+        return '';
     }
-
-    const normalized = cleanHex.length === 3
-        ? cleanHex.split('').map((char) => char + char).join('')
-        : cleanHex;
-
-    const value = parseInt(normalized, 16);
-    if (Number.isNaN(value)) {
-        return null;
+    if (value.length <= length) {
+        return value;
     }
-
-    return {
-        r: (value >> 16) & 255,
-        g: (value >> 8) & 255,
-        b: value & 255
-    };
-}
-
-function escapeHtml(value) {
-    return String(value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+    return `${value.substring(0, length - 1)}…`;
 }
 
 function extractSafeTags(tags) {
@@ -342,6 +604,96 @@ function extractSafeTags(tags) {
     return rawTags
         .map((tag) => escapeHtml(tag.trim()))
         .filter((tag) => tag.length > 0);
+}
+
+function getPlatformLogo(video) {
+    if (video.platformLogo) {
+        return video.platformLogo;
+    }
+    const key = String(video.platform || '').trim().toLowerCase();
+    return PLATFORM_LOGO_MAP[key] || '';
+}
+
+function isYouTubeUrl(url) {
+    return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
+}
+
+function isDirectVideoFile(url) {
+    return /\.(mp4|webm|ogg|ogv)$/i.test(url);
+}
+
+function extractYouTubeId(url) {
+    const cleanedUrl = url.trim();
+    const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/;
+    const match = cleanedUrl.match(regex);
+    if (match && match[1]) {
+        return match[1];
+    }
+
+    const urlObj = (() => {
+        try {
+            return new URL(cleanedUrl, window.location.origin);
+        } catch (error) {
+            return null;
+        }
+    })();
+
+    if (!urlObj) {
+        return '';
+    }
+
+    if (urlObj.hostname.includes('youtube.com')) {
+        return urlObj.searchParams.get('v') || '';
+    }
+
+    if (urlObj.hostname.includes('youtu.be')) {
+        return urlObj.pathname.replace('/', '');
+    }
+
+    return '';
+}
+
+function buildYouTubeEmbedUrl(url, options = {}) {
+    const videoId = extractYouTubeId(url);
+    if (!videoId) {
+        return '';
+    }
+
+    const defaults = {
+        autoplay: 0,
+        mute: 0,
+        loop: 0,
+        controls: 1
+    };
+    const settings = { ...defaults, ...options };
+
+    const params = new URLSearchParams();
+    params.set('autoplay', settings.autoplay ? '1' : '0');
+    params.set('mute', settings.mute ? '1' : '0');
+    params.set('loop', settings.loop ? '1' : '0');
+    params.set('controls', settings.controls ? '1' : '0');
+    params.set('rel', '0');
+    params.set('playsinline', '1');
+    params.set('modestbranding', '1');
+
+    if (settings.loop) {
+        params.set('playlist', videoId);
+    }
+
+    return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function escapeAttribute(value) {
+    return escapeHtml(value).replace(/`/g, '&#96;');
 }
 
 document.addEventListener('DOMContentLoaded', checkLoginStatus);

@@ -11,7 +11,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 // GET-Anfrage zum Abrufen aller Videos (erfordert keinen Login)
 if ($method === 'GET') {
     error_log("API-Anfrage: GET-Methode");
-    $sql = "SELECT id, title, posterUrl, age, summary, tags, platform, firstAired, imdbRating FROM videos ORDER BY title ASC";
+    $sql = "SELECT id, title, posterUrl, previewUrl, trailerUrl, age, summary, tags, platform, platformUrl, platformLogo, watchHint, firstAired, imdbRating FROM videos ORDER BY title ASC";
     
     try {
         $stmt = $pdo->query($sql);
@@ -55,13 +55,24 @@ if ($method === 'POST') {
         
         error_log("Update-Anfrage für ID: " . $id . " mit Daten: " . print_r($_POST, true)); 
 
-        $stmt = $pdo->prepare("UPDATE videos SET title=?, posterUrl=?, age=?, summary=?, tags=?, platform=?, firstAired=?, imdbRating=? WHERE id=?");
+        $stmt = $pdo->prepare("UPDATE videos SET title=?, posterUrl=?, previewUrl=?, trailerUrl=?, age=?, summary=?, tags=?, platform=?, platformUrl=?, platformLogo=?, watchHint=?, firstAired=?, imdbRating=? WHERE id=?");
         
         try {
             $stmt->execute([
-                $_POST['title'], $_POST['posterUrl'], $_POST['age'], $_POST['summary'], 
-                $_POST['tags'], $_POST['platform'], $_POST['firstAired'], 
-                $_POST['imdbRating'], $id
+                $_POST['title'] ?? '',
+                $_POST['posterUrl'] ?? '',
+                $_POST['previewUrl'] ?? '',
+                $_POST['trailerUrl'] ?? '',
+                $_POST['age'] ?? 0,
+                $_POST['summary'] ?? '',
+                $_POST['tags'] ?? '',
+                $_POST['platform'] ?? '',
+                $_POST['platformUrl'] ?? '',
+                $_POST['platformLogo'] ?? '',
+                $_POST['watchHint'] ?? '',
+                $_POST['firstAired'] ?? '',
+                $_POST['imdbRating'] ?? '',
+                $id
             ]);
             echo json_encode(['status' => 'success', 'message' => 'Video aktualisiert']);
         } catch (\PDOException $e) {
@@ -72,13 +83,23 @@ if ($method === 'POST') {
     } else {
         // --- CREATE LOGIC ---
         error_log("Create-Anfrage mit Daten: " . print_r($_POST, true));
-        $stmt = $pdo->prepare("INSERT INTO videos (title, posterUrl, age, summary, tags, platform, firstAired, imdbRating) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO videos (title, posterUrl, previewUrl, trailerUrl, age, summary, tags, platform, platformUrl, platformLogo, watchHint, firstAired, imdbRating) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         
         try {
             $stmt->execute([
-                $_POST['title'], $_POST['posterUrl'], $_POST['age'], $_POST['summary'], 
-                $_POST['tags'], $_POST['platform'], $_POST['firstAired'], 
-                $_POST['imdbRating']
+                $_POST['title'] ?? '',
+                $_POST['posterUrl'] ?? '',
+                $_POST['previewUrl'] ?? '',
+                $_POST['trailerUrl'] ?? '',
+                $_POST['age'] ?? 0,
+                $_POST['summary'] ?? '',
+                $_POST['tags'] ?? '',
+                $_POST['platform'] ?? '',
+                $_POST['platformUrl'] ?? '',
+                $_POST['platformLogo'] ?? '',
+                $_POST['watchHint'] ?? '',
+                $_POST['firstAired'] ?? '',
+                $_POST['imdbRating'] ?? ''
             ]);
             echo json_encode(['status' => 'success', 'id' => $pdo->lastInsertId()]);
         } catch (\PDOException $e) {
