@@ -4,14 +4,75 @@
 session_start();
 include 'db_connect.php'; // Stellt die PDO-Verbindung ($pdo) her
 
+function columnExists(PDO $pdo, $table, $column)
+{
+    try {
+        $stmt = $pdo->prepare("SHOW COLUMNS FROM `$table` LIKE :column");
+        $stmt->execute([':column' => $column]);
+        return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (\PDOException $e) {
+        error_log("Spaltenpruefung fehlgeschlagen: " . $e->getMessage());
+        return false;
+    }
+}
+
+function normalizeAdditionalPlatformsInput($value)
+{
+    if (!isset($value)) {
+        return '[]';
+    }
+
+    if (is_array($value)) {
+        return json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    if (!is_string($value)) {
+        return '[]';
+    }
+
+    $trimmed = trim($value);
+    if ($trimmed === '') {
+        return '[]';
+    }
+
+    $decoded = json_decode($trimmed, true);
+    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+        return json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    $lines = preg_split('/\r\n|\n|;/', $trimmed);
+    $entries = [];
+
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '') {
+            continue;
+        }
+        $parts = array_map('trim', explode('|', $line));
+        $entries[] = [
+            'name' => $parts[0] ?? '',
+            'url' => $parts[1] ?? '',
+            'logo' => $parts[2] ?? '',
+            'hint' => $parts[3] ?? ''
+        ];
+    }
+
+    return json_encode($entries, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+}
+
 header('Content-Type: application/json');
 
 $method = $_SERVER['REQUEST_METHOD'];
+$hasAdditionalPlatforms = columnExists($pdo, 'videos', 'additionalPlatforms');
 
 // GET-Anfrage zum Abrufen aller Videos (erfordert keinen Login)
 if ($method === 'GET') {
     error_log("API-Anfrage: GET-Methode");
-    $sql = "SELECT id, title, posterUrl, previewUrl, trailerUrl, age, summary, tags, platform, platformUrl, platformLogo, watchHint, firstAired, imdbRating FROM videos ORDER BY title ASC";
+    $fields = "id, title, posterUrl, previewUrl, trailerUrl, age, summary, tags, platform, platformUrl, platformLogo, watchHint, firstAired, imdbRating";
+    if ($hasAdditionalPlatforms) {
+        $fields .= ", additionalPlatforms";
+    }
+    $sql = "SELECT $fields FROM videos ORDER BY title ASC";
     
     try {
         $stmt = $pdo->query($sql);
@@ -25,6 +86,20 @@ if ($method === 'GET') {
     
     if (empty($videos)) {
         error_log("Keine Videos gefunden. Leeres Array wird gesendet.");
+    }
+
+    if ($hasAdditionalPlatforms) {
+        foreach ($videos as &$videoRow) {
+            if (!isset($videoRow['additionalPlatforms']) || $videoRow['additionalPlatforms'] === null || $videoRow['additionalPlatforms'] === '') {
+                $videoRow['additionalPlatforms'] = '[]';
+            }
+        }
+        unset($videoRow);
+    } else {
+        foreach ($videos as &$videoRow) {
+            $videoRow['additionalPlatforms'] = '[]';
+        }
+        unset($videoRow);
     }
 
     echo json_encode($videos);
@@ -55,25 +130,39 @@ if ($method === 'POST') {
         
         error_log("Update-Anfrage für ID: " . $id . " mit Daten: " . print_r($_POST, true)); 
 
-        $stmt = $pdo->prepare("UPDATE videos SET title=?, posterUrl=?, previewUrl=?, trailerUrl=?, age=?, summary=?, tags=?, platform=?, platformUrl=?, platformLogo=?, watchHint=?, firstAired=?, imdbRating=? WHERE id=?");
-        
+        $updateData = [
+            'title' => $_POST['title'] ?? '',
+            'posterUrl' => $_POST['posterUrl'] ?? '',
+            'previewUrl' => $_POST['previewUrl'] ?? '',
+            'trailerUrl' => $_POST['trailerUrl'] ?? '',
+            'age' => $_POST['age'] ?? 0,
+            'summary' => $_POST['summary'] ?? '',
+            'tags' => $_POST['tags'] ?? '',
+            'platform' => $_POST['platform'] ?? '',
+            'platformUrl' => $_POST['platformUrl'] ?? '',
+            'platformLogo' => $_POST['platformLogo'] ?? '',
+            'watchHint' => $_POST['watchHint'] ?? '',
+            'firstAired' => $_POST['firstAired'] ?? '',
+            'imdbRating' => $_POST['imdbRating'] ?? ''
+        ];
+
+        if ($hasAdditionalPlatforms) {
+            $updateData['additionalPlatforms'] = normalizeAdditionalPlatformsInput($_POST['additionalPlatforms'] ?? '');
+        }
+
+        $setFragments = [];
+        $values = [];
+        foreach ($updateData as $column => $value) {
+            $setFragments[] = "$column = ?";
+            $values[] = $value;
+        }
+        $values[] = $id;
+
+        $sql = 'UPDATE videos SET ' . implode(', ', $setFragments) . ' WHERE id = ?';
+        $stmt = $pdo->prepare($sql);
+
         try {
-            $stmt->execute([
-                $_POST['title'] ?? '',
-                $_POST['posterUrl'] ?? '',
-                $_POST['previewUrl'] ?? '',
-                $_POST['trailerUrl'] ?? '',
-                $_POST['age'] ?? 0,
-                $_POST['summary'] ?? '',
-                $_POST['tags'] ?? '',
-                $_POST['platform'] ?? '',
-                $_POST['platformUrl'] ?? '',
-                $_POST['platformLogo'] ?? '',
-                $_POST['watchHint'] ?? '',
-                $_POST['firstAired'] ?? '',
-                $_POST['imdbRating'] ?? '',
-                $id
-            ]);
+            $stmt->execute($values);
             echo json_encode(['status' => 'success', 'message' => 'Video aktualisiert']);
         } catch (\PDOException $e) {
             error_log("Fehler beim Aktualisieren: " . $e->getMessage());
@@ -83,24 +172,35 @@ if ($method === 'POST') {
     } else {
         // --- CREATE LOGIC ---
         error_log("Create-Anfrage mit Daten: " . print_r($_POST, true));
-        $stmt = $pdo->prepare("INSERT INTO videos (title, posterUrl, previewUrl, trailerUrl, age, summary, tags, platform, platformUrl, platformLogo, watchHint, firstAired, imdbRating) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        
+        $insertData = [
+            'title' => $_POST['title'] ?? '',
+            'posterUrl' => $_POST['posterUrl'] ?? '',
+            'previewUrl' => $_POST['previewUrl'] ?? '',
+            'trailerUrl' => $_POST['trailerUrl'] ?? '',
+            'age' => $_POST['age'] ?? 0,
+            'summary' => $_POST['summary'] ?? '',
+            'tags' => $_POST['tags'] ?? '',
+            'platform' => $_POST['platform'] ?? '',
+            'platformUrl' => $_POST['platformUrl'] ?? '',
+            'platformLogo' => $_POST['platformLogo'] ?? '',
+            'watchHint' => $_POST['watchHint'] ?? '',
+            'firstAired' => $_POST['firstAired'] ?? '',
+            'imdbRating' => $_POST['imdbRating'] ?? ''
+        ];
+
+        if ($hasAdditionalPlatforms) {
+            $insertData['additionalPlatforms'] = normalizeAdditionalPlatformsInput($_POST['additionalPlatforms'] ?? '');
+        }
+
+        $columns = array_keys($insertData);
+        $placeholders = array_fill(0, count($columns), '?');
+        $values = array_values($insertData);
+
+        $sql = 'INSERT INTO videos (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')';
+        $stmt = $pdo->prepare($sql);
+
         try {
-            $stmt->execute([
-                $_POST['title'] ?? '',
-                $_POST['posterUrl'] ?? '',
-                $_POST['previewUrl'] ?? '',
-                $_POST['trailerUrl'] ?? '',
-                $_POST['age'] ?? 0,
-                $_POST['summary'] ?? '',
-                $_POST['tags'] ?? '',
-                $_POST['platform'] ?? '',
-                $_POST['platformUrl'] ?? '',
-                $_POST['platformLogo'] ?? '',
-                $_POST['watchHint'] ?? '',
-                $_POST['firstAired'] ?? '',
-                $_POST['imdbRating'] ?? ''
-            ]);
+            $stmt->execute($values);
             echo json_encode(['status' => 'success', 'id' => $pdo->lastInsertId()]);
         } catch (\PDOException $e) {
             error_log("Fehler beim Speichern: " . $e->getMessage());

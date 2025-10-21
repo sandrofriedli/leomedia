@@ -16,6 +16,7 @@ const detailModal = document.getElementById('detailModal');
 const detailModalContent = document.getElementById('detailModalContent');
 const formModalTitle = document.getElementById('formModalTitle');
 const videoForm = document.getElementById('videoForm');
+const additionalPlatformsInput = document.getElementById('additionalPlatforms');
 const authControls = document.getElementById('auth-controls');
 const addVideoBtnContainer = document.getElementById('add-video-btn-container');
 
@@ -57,6 +58,21 @@ const PLATFORM_LOGO_MAP = {
     ard: 'assets/logos/ard-mediathek.svg',
     'ard mediathek': 'assets/logos/ard-mediathek.svg'
 };
+
+const posterPlaceholderCache = new Map();
+
+const PLACEHOLDER_GRADIENTS = [
+    ['#1d4ed8', '#1e40af'],
+    ['#0f766e', '#134e4a'],
+    ['#a855f7', '#7e22ce'],
+    ['#db2777', '#9d174d'],
+    ['#f97316', '#c2410c'],
+    ['#059669', '#047857'],
+    ['#2563eb', '#1d4ed8'],
+    ['#f59e0b', '#b45309']
+];
+
+const YOUTUBE_THUMBNAIL_BASE = 'https://i.ytimg.com/vi/';
 
 let allVideos = [];
 let loggedIn = false;
@@ -137,7 +153,8 @@ function renderHero(video) {
     const summary = video.summary || 'Noch keine Beschreibung vorhanden.';
     const age = getAge(video);
     const tags = extractSafeTags(video.tags);
-    const platformName = video.platform ? video.platform.trim() : '';
+    const platforms = normalizePlatformEntries(video);
+    const primaryPlatform = platforms[0] || null;
     const facts = [];
 
     heroMedia.innerHTML = createHeroMediaMarkup(video, safeTitle);
@@ -146,8 +163,8 @@ function renderHero(video) {
 
     heroAge.textContent = `Ab ${age} Jahren`;
 
-    if (platformName) {
-        heroPlatform.textContent = platformName;
+    if (primaryPlatform && primaryPlatform.name) {
+        heroPlatform.textContent = primaryPlatform.name;
         heroPlatform.classList.remove('hidden');
     } else {
         heroPlatform.classList.add('hidden');
@@ -159,6 +176,12 @@ function renderHero(video) {
 
     if (video.imdbRating) {
         facts.push(`<span><svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.143 3.513a1 1 0 00.95.69h3.688c.969 0 1.371 1.24.588 1.81l-2.985 2.17a1 1 0 00-.364 1.118l1.143 3.513c.3.921-.755 1.688-1.54 1.118l-2.985-2.17a1 1 0 00-1.175 0l-2.985 2.17c-.784.57-1.838-.197-1.539-1.118l1.142-3.513a1 1 0 00-.364-1.118l-2.985-2.17c-.783-.57-.38-1.81.588-1.81h3.689a1 1 0 00.95-.69l1.143-3.513z"/></svg>${escapeHtml(String(video.imdbRating))} IMDb</span>`);
+    }
+
+    const additionalPlatforms = platforms.slice(1).map((entry) => entry.name).filter((name) => name && name.length > 0);
+    if (additionalPlatforms.length > 0) {
+        const label = additionalPlatforms.map((name) => escapeHtml(name)).join(', ');
+        facts.push(`<span><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>Auch bei ${label}</span>`);
     }
 
     if (facts.length > 0) {
@@ -176,7 +199,8 @@ function renderHero(video) {
         heroTags.classList.add('hidden');
     }
 
-    const watchLink = (video.platformUrl || '').trim();
+    const watchSource = platforms.find((entry) => entry.url) || null;
+    const watchLink = watchSource && watchSource.url ? watchSource.url : '';
     if (watchLink) {
         heroWatchButton.href = watchLink;
         heroWatchButton.classList.remove('hidden');
@@ -244,8 +268,8 @@ function createSeriesCard(video) {
     const cardSummary = escapeHtml(truncateText(rawSummary, 140));
     const tags = extractSafeTags(video.tags).slice(0, 4);
     const age = getAge(video);
-    const platformName = video.platform ? escapeHtml(video.platform) : '';
     const previewMedia = createCardPreviewMarkup(video, safeTitle);
+    const platformBadges = buildPlatformBadges(video);
 
     const adminControlsHtml = loggedIn
         ? `
@@ -270,7 +294,7 @@ function createSeriesCard(video) {
             ${previewMedia}
             <div class="preview-overlay">
                 <span class="age-badge">Ab ${age} J.</span>
-                ${platformName ? `<span class="preview-platform">${platformName}</span>` : ''}
+                ${platformBadges}
             </div>
         </div>
         <div class="info">
@@ -306,7 +330,7 @@ function createSeriesCard(video) {
 
 function createHeroMediaMarkup(video, safeTitle) {
     const previewUrl = (video.previewUrl || '').trim();
-    const posterUrl = (video.posterUrl || '').trim();
+    const posterUrl = resolvePosterUrl(video);
 
     if (previewUrl) {
         if (isYouTubeUrl(previewUrl)) {
@@ -315,7 +339,8 @@ function createHeroMediaMarkup(video, safeTitle) {
                 return `<iframe src="${embedUrl}" title="Vorschau ${safeTitle}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
             }
         } else if (isDirectVideoFile(previewUrl)) {
-            return `<video src="${escapeAttribute(previewUrl)}" autoplay muted loop playsinline ${posterUrl ? `poster="${escapeAttribute(posterUrl)}"` : ''}></video>`;
+            const posterAttribute = posterUrl ? ` poster="${escapeAttribute(posterUrl)}"` : '';
+            return `<video src="${escapeAttribute(previewUrl)}" autoplay muted loop playsinline${posterAttribute}></video>`;
         }
     }
 
@@ -327,15 +352,9 @@ function createHeroMediaMarkup(video, safeTitle) {
 }
 
 function createCardPreviewMarkup(video, safeTitle) {
-    const posterUrl = (video.posterUrl || '').trim();
+    const posterUrl = resolvePosterUrl(video);
     const previewUrl = (video.previewUrl || '').trim();
-    const parts = [];
-
-    if (posterUrl) {
-        parts.push(`<img src="${escapeAttribute(posterUrl)}" alt="Poster ${safeTitle}">`);
-    } else {
-        parts.push(`<div class="h-full w-full flex items-center justify-center text-slate-400 text-sm bg-slate-900">Keine Grafik</div>`);
-    }
+    const parts = [`<img src="${escapeAttribute(posterUrl)}" alt="Poster ${safeTitle}">`];
 
     if (previewUrl && isDirectVideoFile(previewUrl)) {
         parts.push(`<video src="${escapeAttribute(previewUrl)}" muted loop playsinline preload="metadata"></video>`);
@@ -364,8 +383,14 @@ function openFormModal(video = null) {
         document.getElementById('tags').value = video.tags || '';
         document.getElementById('summary').value = video.summary || '';
         document.getElementById('watchHint').value = video.watchHint || '';
+        if (additionalPlatformsInput) {
+            additionalPlatformsInput.value = formatAdditionalPlatformsForForm(video);
+        }
     } else {
         formModalTitle.textContent = 'Neue Serie';
+        if (additionalPlatformsInput) {
+            additionalPlatformsInput.value = '';
+        }
     }
 
     formModal.classList.remove('hidden');
@@ -382,11 +407,12 @@ function openDetailModal(video) {
     const summary = escapeHtml(video.summary || 'Noch keine Beschreibung vorhanden.');
     const fullTags = extractSafeTags(video.tags);
     const age = getAge(video);
-    const platformName = video.platform ? escapeHtml(video.platform) : '';
-    const posterUrl = video.posterUrl ? escapeAttribute(video.posterUrl) : '';
-    const streamLogo = getPlatformLogo(video);
-    const watchLink = (video.platformUrl || '').trim();
-    const watchHint = video.watchHint || '';
+    const platforms = normalizePlatformEntries(video);
+    const primaryPlatform = platforms[0] || null;
+    const platformName = primaryPlatform && primaryPlatform.name ? escapeHtml(primaryPlatform.name) : '';
+    const posterUrl = resolvePosterUrl(video);
+    const posterMarkup = posterUrl ? `<img src="${escapeAttribute(posterUrl)}" alt="Poster ${safeTitle}">` : '';
+    const streamingCallouts = createStreamingCallouts(video);
     const detailTags = fullTags.length
         ? `<div class="hero-tags mt-6">${fullTags.map((tag) => `<span>${tag}</span>`).join('')}</div>`
         : '';
@@ -404,11 +430,10 @@ function openDetailModal(video) {
     }
 
     const trailerMarkup = createTrailerMarkup(video, safeTitle);
-    const streamingCallout = createStreamingCallout(platformName, streamLogo, watchLink, watchHint);
 
     detailModalContent.innerHTML = `
         <section class="detail-hero">
-            ${posterUrl ? `<img src="${posterUrl}" alt="Poster ${safeTitle}">` : ''}
+            ${posterMarkup}
             <div class="detail-hero-content">
                 <div class="hero-meta-row">
                     <span class="hero-age">Ab ${age} Jahren</span>
@@ -428,7 +453,7 @@ function openDetailModal(video) {
                 </div>
             </div>
             <aside class="space-y-6">
-                ${streamingCallout}
+                ${streamingCallouts}
                 ${trailerMarkup ? `<div><h3>Trailer</h3><div class="detail-trailer">${trailerMarkup}</div></div>` : ''}
             </aside>
         </section>
@@ -444,35 +469,57 @@ function closeDetailModal() {
     detailModalContent.innerHTML = '';
 }
 
-function createStreamingCallout(platformName, streamLogo, watchLink, watchHint) {
-    if (!platformName && !streamLogo && !watchLink && !watchHint) {
+function createStreamingCallouts(video) {
+    const platforms = normalizePlatformEntries(video);
+    if (platforms.length === 0) {
         return '';
     }
 
-    const displayName = platformName || 'Streaming-Plattform';
-    const description = watchHint
-        ? watchHint
-        : watchLink
-            ? `Mit einem Klick geht es zu ${displayName}.`
+    const cards = platforms.map((platform) => createStreamingCalloutCard(platform));
+    return `<div class="streaming-callout-list">${cards.join('')}</div>`;
+}
+
+function createStreamingCalloutCard(platform) {
+    const displayName = platform.name ? escapeHtml(platform.name) : 'Streaming-Plattform';
+    const descriptionText = platform.hint
+        ? platform.hint
+        : platform.url
+            ? `Mit einem Klick geht es zu ${platform.name || 'der Plattform'}.`
             : 'Frag Mama oder Papa, wo du die Serie schauen kannst.';
+    const description = escapeHtml(descriptionText);
+
+    const logoMarkup = platform.logo
+        ? `<img src="${escapeAttribute(platform.logo)}" alt="${displayName} Logo" class="platform-logo">`
+        : '';
+
+    const linkMarkup = platform.url
+        ? `<a href="${escapeAttribute(platform.url)}" target="_blank" rel="noopener noreferrer" class="watch-link">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6V4z"/></svg>
+                Auf ${displayName} schauen
+            </a>`
+        : '';
+
+    const hintMarkup = !linkMarkup && platform.hint
+        ? `<span class="platform-hint">${escapeHtml(platform.hint)}</span>`
+        : '';
+
+    const classes = ['streaming-callout'];
+    if (!platform.primary) {
+        classes.push('streaming-callout--secondary');
+    }
 
     return `
-        <div class="streaming-callout">
+        <div class="${classes.join(' ')}">
             <div class="flex items-center gap-4">
-                ${streamLogo ? `<img src="${escapeAttribute(streamLogo)}" alt="${displayName} Logo" class="platform-logo">` : ''}
+                ${logoMarkup}
                 <div>
                     <strong>${displayName}</strong>
-                    <p class="text-slate-300 text-sm">${escapeHtml(description)}</p>
+                    <p class="text-slate-300 text-sm">${description}</p>
                 </div>
             </div>
             <div class="streaming-actions">
-                ${watchLink
-                    ? `<a href="${escapeAttribute(watchLink)}" target="_blank" rel="noopener noreferrer" class="watch-link">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6V4z"/></svg>
-                        Auf ${displayName} schauen
-                    </a>`
-                    : ''}
-                ${watchHint && !watchLink ? `<span class="platform-hint">${escapeHtml(watchHint)}</span>` : ''}
+                ${linkMarkup}
+                ${hintMarkup}
             </div>
         </div>
     `;
@@ -480,7 +527,8 @@ function createStreamingCallout(platformName, streamLogo, watchLink, watchHint) 
 
 function createTrailerMarkup(video, safeTitle) {
     const trailerCandidate = (video.trailerUrl || video.previewUrl || '').trim();
-    const posterUrl = video.posterUrl ? escapeAttribute(video.posterUrl) : '';
+    const posterUrl = resolvePosterUrl(video);
+    const posterAttribute = posterUrl ? ` poster="${escapeAttribute(posterUrl)}"` : '';
 
     if (!trailerCandidate) {
         return '';
@@ -494,7 +542,7 @@ function createTrailerMarkup(video, safeTitle) {
     }
 
     if (isDirectVideoFile(trailerCandidate)) {
-        return `<video src="${escapeAttribute(trailerCandidate)}" controls playsinline ${posterUrl ? `poster="${posterUrl}"` : ''}></video>`;
+        return `<video src="${escapeAttribute(trailerCandidate)}" controls playsinline${posterAttribute}></video>`;
     }
 
     return '';
@@ -577,6 +625,332 @@ async function logout() {
     window.location.reload();
 }
 
+function formatAdditionalPlatformsForForm(video) {
+    if (!video) {
+        return '';
+    }
+
+    const entries = extractAdditionalPlatformValues(video);
+    if (entries.length === 0) {
+        return '';
+    }
+
+    return entries
+        .map((entry) => {
+            const parts = [];
+            if (entry.name) {
+                parts.push(entry.name);
+            }
+            if (entry.url) {
+                parts.push(entry.url);
+            }
+            if (entry.logo) {
+                parts.push(entry.logo);
+            }
+            if (entry.hint) {
+                parts.push(entry.hint);
+            }
+            return parts.join('|');
+        })
+        .join('\n');
+}
+
+function normalizePlatformEntries(video) {
+    const entries = [];
+    const seen = new Set();
+
+    const baseEntry = normalizePlatformEntry({
+        name: typeof video.platform === 'string' ? video.platform : '',
+        url: typeof video.platformUrl === 'string' ? video.platformUrl : '',
+        logo: typeof video.platformLogo === 'string' ? video.platformLogo : '',
+        hint: typeof video.watchHint === 'string' ? video.watchHint : ''
+    });
+
+    if (baseEntry) {
+        baseEntry.logo = resolvePlatformLogoByName(baseEntry.name, baseEntry.logo);
+        baseEntry.primary = true;
+        const signature = buildPlatformSignature(baseEntry.name, baseEntry.url);
+        seen.add(signature);
+        entries.push(baseEntry);
+    }
+
+    const additionalEntries = extractAdditionalPlatformValues(video);
+    additionalEntries.forEach((entry) => {
+        const signature = buildPlatformSignature(entry.name, entry.url);
+        if (seen.has(signature)) {
+            return;
+        }
+        entry.primary = entries.length === 0;
+        seen.add(signature);
+        entries.push(entry);
+    });
+
+    if (entries.length > 0) {
+        entries[0].primary = true;
+        for (let index = 1; index < entries.length; index += 1) {
+            entries[index].primary = false;
+        }
+    }
+
+    return entries;
+}
+
+function buildPlatformSignature(name, url) {
+    const normalizedName = (name || '').trim().toLowerCase();
+    const normalizedUrl = (url || '').trim().toLowerCase();
+    return `${normalizedName}|${normalizedUrl}`;
+}
+
+function extractAdditionalPlatformValues(video) {
+    const candidates = [
+        video.additionalPlatforms,
+        video.morePlatforms,
+        video.otherPlatforms,
+        video.platforms
+    ];
+
+    const uniqueEntries = new Map();
+
+    candidates.forEach((candidate) => {
+        const parsed = parseAdditionalPlatformPayload(candidate);
+        parsed.forEach((entry) => {
+            const normalized = normalizePlatformEntry(entry);
+            if (!normalized) {
+                return;
+            }
+            normalized.logo = resolvePlatformLogoByName(normalized.name, normalized.logo);
+            const signature = buildPlatformSignature(normalized.name, normalized.url);
+            if (!uniqueEntries.has(signature)) {
+                uniqueEntries.set(signature, normalized);
+            }
+        });
+    });
+
+    return Array.from(uniqueEntries.values());
+}
+
+function parseAdditionalPlatformPayload(value) {
+    if (!value) {
+        return [];
+    }
+
+    if (Array.isArray(value)) {
+        return value.flatMap((item) => parseAdditionalPlatformPayload(item));
+    }
+
+    if (typeof value === 'object') {
+        if (value === null) {
+            return [];
+        }
+        if ('name' in value || 'url' in value || 'logo' in value || 'hint' in value) {
+            return [value];
+        }
+        return Object.keys(value).map((key) => ({
+            name: key,
+            url: typeof value[key] === 'string' ? value[key] : ''
+        }));
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return [];
+        }
+
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            try {
+                const parsedJson = JSON.parse(trimmed);
+                return parseAdditionalPlatformPayload(parsedJson);
+            } catch (error) {
+                return [];
+            }
+        }
+
+        return trimmed
+            .split(/\r?\n|;/)
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0)
+            .map((line) => {
+                const parts = line.split('|').map((part) => part.trim());
+                return {
+                    name: parts[0] || '',
+                    url: parts[1] || '',
+                    logo: parts[2] || '',
+                    hint: parts[3] || ''
+                };
+            });
+    }
+
+    return [];
+}
+
+function normalizePlatformEntry(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return null;
+    }
+
+    const rawName = typeof entry.name === 'string' ? entry.name.trim() : '';
+    const rawUrl = typeof entry.url === 'string' ? entry.url.trim() : '';
+    const rawLogo = typeof entry.logo === 'string' ? entry.logo.trim() : '';
+    const rawHint = typeof entry.hint === 'string' ? entry.hint.trim() : '';
+
+    let name = rawName;
+    if (!name) {
+        name = deriveDisplayNameFromUrl(rawUrl);
+    }
+
+    if (!name && !rawUrl && !rawLogo && !rawHint) {
+        return null;
+    }
+
+    if (!name) {
+        name = 'Streaming-Tipp';
+    }
+
+    return {
+        name,
+        url: rawUrl,
+        logo: rawLogo,
+        hint: rawHint
+    };
+}
+
+function deriveDisplayNameFromUrl(url) {
+    if (!url) {
+        return '';
+    }
+
+    try {
+        const parsed = new URL(url, window.location.origin);
+        const hostname = parsed.hostname.replace(/^www\./i, '');
+        const segments = hostname.split('.');
+        if (segments.length >= 2) {
+            const core = segments[segments.length - 2];
+            if (core) {
+                return core.charAt(0).toUpperCase() + core.slice(1);
+            }
+        }
+        return hostname;
+    } catch (error) {
+        return '';
+    }
+}
+
+function resolvePlatformLogoByName(name, explicitLogo = '') {
+    if (explicitLogo) {
+        return explicitLogo;
+    }
+    const key = String(name || '').trim().toLowerCase();
+    return PLATFORM_LOGO_MAP[key] || '';
+}
+
+function buildPlatformBadges(video) {
+    const platforms = normalizePlatformEntries(video);
+    if (platforms.length === 0) {
+        return '';
+    }
+
+    const chips = platforms.slice(0, 2).map((platform) => `<span class="platform-chip">${escapeHtml(platform.name)}</span>`);
+    const remaining = platforms.length - chips.length;
+
+    if (remaining > 0) {
+        chips.push(`<span class="platform-chip platform-chip--more">+${remaining}</span>`);
+    }
+
+    return `<div class="platform-badges">${chips.join('')}</div>`;
+}
+
+function resolvePosterUrl(video) {
+    if (!video) {
+        return generatePosterPlaceholder('');
+    }
+
+    const explicitPoster = typeof video.posterUrl === 'string' ? video.posterUrl.trim() : '';
+    if (explicitPoster) {
+        return explicitPoster;
+    }
+
+    const previewCandidates = [
+        typeof video.previewUrl === 'string' ? video.previewUrl.trim() : '',
+        typeof video.trailerUrl === 'string' ? video.trailerUrl.trim() : ''
+    ];
+
+    for (let index = 0; index < previewCandidates.length; index += 1) {
+        const candidate = previewCandidates[index];
+        if (!candidate) {
+            continue;
+        }
+        if (isYouTubeUrl(candidate)) {
+            const videoId = extractYouTubeId(candidate);
+            if (videoId) {
+                return buildYouTubeThumbnailUrl(videoId);
+            }
+        }
+    }
+
+    return generatePosterPlaceholder(video.title || '');
+}
+
+function buildYouTubeThumbnailUrl(videoId) {
+    return `${YOUTUBE_THUMBNAIL_BASE}${videoId}/hqdefault.jpg`;
+}
+
+function generatePosterPlaceholder(title) {
+    const rawTitle = (title || 'Serie').trim();
+    const cacheKey = rawTitle.toLowerCase();
+
+    if (posterPlaceholderCache.has(cacheKey)) {
+        return posterPlaceholderCache.get(cacheKey);
+    }
+
+    const initials = getInitialsFromTitle(rawTitle);
+    const [startColor, endColor] = selectPlaceholderColors(cacheKey);
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${startColor}"/><stop offset="100%" stop-color="${endColor}"/></linearGradient></defs><rect width="1600" height="900" fill="url(%23grad)"/><text x="50%" y="52%" text-anchor="middle" fill="#f8fafc" font-size="360" font-family="Inter, Arial, Helvetica, sans-serif" font-weight="700" letter-spacing="12">${initials}</text></svg>`;
+    const dataUri = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+
+    posterPlaceholderCache.set(cacheKey, dataUri);
+    return dataUri;
+}
+
+function getInitialsFromTitle(title) {
+    if (!title) {
+        return 'TV';
+    }
+
+    const normalized = title
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, ' ')
+        .trim();
+
+    const words = normalized.split(/\s+/).filter((word) => word.length > 0);
+    const letters = words.slice(0, 2).map((word) => word.charAt(0)).join('');
+    const sanitized = letters.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    if (sanitized) {
+        return sanitized;
+    }
+
+    const fallback = normalized.replace(/[^A-Z0-9]/gi, '').slice(0, 2).toUpperCase();
+    return fallback || 'TV';
+}
+
+function selectPlaceholderColors(seed) {
+    if (!Array.isArray(PLACEHOLDER_GRADIENTS) || PLACEHOLDER_GRADIENTS.length === 0) {
+        return ['#1e293b', '#0f172a'];
+    }
+
+    const normalizedSeed = (seed || 'default').toLowerCase();
+    let hash = 0;
+
+    for (let index = 0; index < normalizedSeed.length; index += 1) {
+        hash = (hash * 31 + normalizedSeed.charCodeAt(index)) & 0xffffffff;
+    }
+
+    const position = Math.abs(hash) % PLACEHOLDER_GRADIENTS.length;
+    return PLACEHOLDER_GRADIENTS[position];
+}
+
 function getAge(video) {
     const value = Number(video.age);
     if (Number.isNaN(value) || value < 0) {
@@ -607,11 +981,7 @@ function extractSafeTags(tags) {
 }
 
 function getPlatformLogo(video) {
-    if (video.platformLogo) {
-        return video.platformLogo;
-    }
-    const key = String(video.platform || '').trim().toLowerCase();
-    return PLATFORM_LOGO_MAP[key] || '';
+    return resolvePlatformLogoByName(video.platform, video.platformLogo);
 }
 
 function isYouTubeUrl(url) {
